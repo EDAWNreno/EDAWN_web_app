@@ -7,11 +7,24 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <style>
+    /* EDAWN Brand Colors */
+    :root {
+      --edawn-blue:       #014684;
+      --edawn-teal:       #008b99;
+      --edawn-teal-light: #e0f5f7;
+      --edawn-blue-light: #e3edf7;
+      /* Override Bootstrap primary to teal */
+      --bs-primary:       #008b99;
+      --bs-primary-rgb:   0,139,153;
+      --bs-link-color:    #008b99;
+      --bs-link-hover-color: #014684;
+    }
+
     body { background-color: #f0f2f5; }
 
     .sidebar {
       min-height: 100vh;
-      background: #1a3a5c;
+      background: var(--edawn-blue);
       width: 240px;
       position: fixed;
       top: 0; left: 0;
@@ -24,9 +37,10 @@
       font-size: 1.2rem;
       font-weight: 700;
       color: #fff;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
+      border-bottom: 1px solid rgba(255,255,255,0.15);
+      letter-spacing: .03em;
     }
-    .sidebar .brand span { color: #5bc8f5; }
+    .sidebar .brand span { color: var(--edawn-teal); }
     .sidebar .nav-link {
       color: rgba(255,255,255,0.75);
       padding: .65rem 1.5rem;
@@ -39,13 +53,13 @@
     }
     .sidebar .nav-link:hover,
     .sidebar .nav-link.active {
-      background: rgba(255,255,255,0.12);
+      background: var(--edawn-teal);
       color: #fff;
     }
     .sidebar .nav-link i { font-size: 1rem; width: 20px; text-align: center; }
     .sidebar-bottom {
       margin-top: auto;
-      border-top: 1px solid rgba(255,255,255,0.1);
+      border-top: 1px solid rgba(255,255,255,0.15);
       padding: .5rem 0;
     }
     .main-content {
@@ -56,19 +70,59 @@
     .page-header {
       margin-bottom: 1.5rem;
       padding-bottom: .75rem;
-      border-bottom: 1px solid #dee2e6;
+      border-bottom: 2px solid var(--edawn-teal);
     }
+    .page-header h4 { color: var(--edawn-blue); }
     .card { border: none; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-    .card-header { background: #fff; border-bottom: 1px solid #eee; font-weight: 600; }
+    .card-header {
+      background: #fff;
+      border-bottom: 1px solid #eee;
+      font-weight: 600;
+      color: var(--edawn-blue);
+    }
+
+    /* Buttons */
+    .btn-primary {
+      background-color: var(--edawn-teal);
+      border-color: var(--edawn-teal);
+      color: #fff;
+    }
+    .btn-primary:hover, .btn-primary:focus {
+      background-color: var(--edawn-blue);
+      border-color: var(--edawn-blue);
+      color: #fff;
+    }
+    .btn-outline-primary {
+      color: var(--edawn-teal);
+      border-color: var(--edawn-teal);
+    }
+    .btn-outline-primary:hover {
+      background-color: var(--edawn-teal);
+      border-color: var(--edawn-teal);
+      color: #fff;
+    }
+
+    /* Progress bars */
+    .progress-bar { background-color: var(--edawn-teal); }
+    .progress-bar.bg-primary { background-color: var(--edawn-teal) !important; }
+
+    /* Badges */
+    .bg-primary { background-color: var(--edawn-teal) !important; }
+    .text-primary { color: var(--edawn-teal) !important; }
 
     .badge-pending    { background: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; }
     .badge-in_progress { background: #fff3cd; color: #856404; border: 1px solid #ffecb5; }
     .badge-completed  { background: #d1e7dd; color: #0a3622; border: 1px solid #badbcc; }
     .badge-low    { background: #e2e3e5; color: #41464b; }
-    .badge-medium { background: #cfe2ff; color: #084298; }
+    .badge-medium { background: var(--edawn-teal-light); color: var(--edawn-blue); }
     .badge-high   { background: #f8d7da; color: #842029; }
 
-    .leaderboard-rank { font-size: 1.4rem; font-weight: 700; color: #1a3a5c; width: 40px; }
+    .stat-icon-blue { background: var(--edawn-blue-light); }
+    .stat-icon-teal { background: var(--edawn-teal-light); }
+    .stat-icon-blue i { color: var(--edawn-blue); }
+    .stat-icon-teal i { color: var(--edawn-teal); }
+
+    .leaderboard-rank { font-size: 1.4rem; font-weight: 700; color: var(--edawn-blue); width: 40px; }
     .rank-1 { color: #f5c518; }
     .rank-2 { color: #adb5bd; }
     .rank-3 { color: #cd7f32; }
