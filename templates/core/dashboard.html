@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard – EDAWN{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h4 class="mb-0 fw-bold">Dashboard</h4>
+    <small class="text-muted">Welcome back, {{ user.get_full_name|default:user.username }}!</small>
+  </div>
+</div>
+
+<!-- Stats row -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-3">
+    <div class="card h-100">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="rounded-circle d-flex align-items-center justify-content-center"
+             style="width:48px;height:48px;background:#e8f0fe;">
+          <i class="bi bi-check2-square text-primary fs-5"></i>
+        </div>
+        <div>
+          <div class="fs-4 fw-bold">{{ total_tasks }}</div>
+          <div class="text-muted small">Total Tasks</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card h-100">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="rounded-circle d-flex align-items-center justify-content-center"
+             style="width:48px;height:48px;background:#d1e7dd;">
+          <i class="bi bi-check-circle text-success fs-5"></i>
+        </div>
+        <div>
+          <div class="fs-4 fw-bold">{{ completed_tasks }}</div>
+          <div class="text-muted small">Completed</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card h-100">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="rounded-circle d-flex align-items-center justify-content-center"
+             style="width:48px;height:48px;background:#fff3cd;">
+          <i class="bi bi-hourglass-split text-warning fs-5"></i>
+        </div>
+        <div>
+          <div class="fs-4 fw-bold">{{ my_tasks.count }}</div>
+          <div class="text-muted small">Open Tasks</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-3">
+    <div class="card h-100">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="rounded-circle d-flex align-items-center justify-content-center"
+             style="width:48px;height:48px;background:#f8d7da;">
+          <i class="bi bi-exclamation-triangle text-danger fs-5"></i>
+        </div>
+        <div>
+          <div class="fs-4 fw-bold">{{ overdue_tasks|length }}</div>
+          <div class="text-muted small">Overdue</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- My Tasks -->
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center py-3">
+        <span><i class="bi bi-check2-square me-2"></i>My Open Tasks</span>
+        <a href="{% url 'task_list' %}" class="btn btn-sm btn-outline-secondary">View All</a>
+      </div>
+      <div class="card-body p-0">
+        {% if my_tasks %}
+        <ul class="list-group list-group-flush">
+          {% for task in my_tasks %}
+          <li class="list-group-item d-flex justify-content-between align-items-start py-3 px-3">
+            <div class="flex-grow-1 me-2">
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <a href="{% url 'task_detail' task.pk %}" class="fw-semibold text-decoration-none text-dark">
+                  {{ task.title }}
+                </a>
+                {% if task.is_overdue %}
+                <span class="badge bg-danger">Overdue</span>
+                {% endif %}
+              </div>
+              <div class="d-flex gap-2 flex-wrap">
+                <span class="badge badge-{{ task.status }} rounded-pill">{{ task.get_status_display }}</span>
+                <span class="badge badge-{{ task.priority }} rounded-pill">{{ task.get_priority_display }}</span>
+                {% if task.due_date %}
+                <small class="text-muted"><i class="bi bi-calendar3"></i> {{ task.due_date }}</small>
+                {% endif %}
+              </div>
+            </div>
+            <form method="post" action="{% url 'task_complete' task.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{% url 'dashboard' %}">
+              <button type="submit" class="btn btn-sm btn-outline-success" title="Mark complete">
+                <i class="bi bi-check-lg"></i>
+              </button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+          <i class="bi bi-check2-all fs-2 d-block mb-2"></i>
+          No open tasks — you're all caught up!
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Goals + Leaderboard -->
+  <div class="col-lg-5">
+    <!-- Goals -->
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center py-3">
+        <span><i class="bi bi-bullseye me-2"></i>My Goals</span>
+        <a href="{% url 'goal_list' %}" class="btn btn-sm btn-outline-secondary">View All</a>
+      </div>
+      <div class="card-body">
+        {% if my_goals %}
+          {% for goal in my_goals|slice:":4" %}
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <a href="{% url 'goal_detail' goal.pk %}" class="text-decoration-none text-dark fw-semibold small">
+                {{ goal.title }}
+              </a>
+              <small class="text-muted">{{ goal.progress_percentage }}%</small>
+            </div>
+            <div class="progress" style="height:8px;">
+              <div class="progress-bar {% if goal.is_complete %}bg-success{% else %}bg-primary{% endif %}"
+                   style="width:{{ goal.progress_percentage }}%"></div>
+            </div>
+            <small class="text-muted">{{ goal.current_value }} / {{ goal.target_value }}</small>
+          </div>
+          {% endfor %}
+        {% else %}
+        <p class="text-muted text-center small py-3">No goals yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Mini leaderboard -->
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center py-3">
+        <span><i class="bi bi-trophy me-2"></i>Leaderboard</span>
+        <a href="{% url 'leaderboard' %}" class="btn btn-sm btn-outline-secondary">Full Board</a>
+      </div>
+      <div class="card-body p-0">
+        {% if top_users %}
+        <ul class="list-group list-group-flush">
+          {% for u in top_users %}
+          <li class="list-group-item d-flex align-items-center gap-3 py-2 px-3">
+            <span class="leaderboard-rank {% if forloop.counter == 1 %}rank-1{% elif forloop.counter == 2 %}rank-2{% elif forloop.counter == 3 %}rank-3{% endif %}">
+              #{{ forloop.counter }}
+            </span>
+            <span class="flex-grow-1 fw-semibold">{{ u.get_full_name|default:u.username }}</span>
+            <span class="badge bg-primary rounded-pill">{{ u.completed_count }} done</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted text-center small py-3">No completions yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

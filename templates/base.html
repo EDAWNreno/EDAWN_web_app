@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}EDAWN{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body { background-color: #f0f2f5; }
+
+    .sidebar {
+      min-height: 100vh;
+      background: #1a3a5c;
+      width: 240px;
+      position: fixed;
+      top: 0; left: 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+    }
+    .sidebar .brand {
+      padding: 1.25rem 1.5rem;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .sidebar .brand span { color: #5bc8f5; }
+    .sidebar .nav-link {
+      color: rgba(255,255,255,0.75);
+      padding: .65rem 1.5rem;
+      font-size: .925rem;
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      border-radius: 0;
+      transition: background .15s, color .15s;
+    }
+    .sidebar .nav-link:hover,
+    .sidebar .nav-link.active {
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+    }
+    .sidebar .nav-link i { font-size: 1rem; width: 20px; text-align: center; }
+    .sidebar-bottom {
+      margin-top: auto;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding: .5rem 0;
+    }
+    .main-content {
+      margin-left: 240px;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+    .page-header {
+      margin-bottom: 1.5rem;
+      padding-bottom: .75rem;
+      border-bottom: 1px solid #dee2e6;
+    }
+    .card { border: none; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .card-header { background: #fff; border-bottom: 1px solid #eee; font-weight: 600; }
+
+    .badge-pending    { background: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; }
+    .badge-in_progress { background: #fff3cd; color: #856404; border: 1px solid #ffecb5; }
+    .badge-completed  { background: #d1e7dd; color: #0a3622; border: 1px solid #badbcc; }
+    .badge-low    { background: #e2e3e5; color: #41464b; }
+    .badge-medium { background: #cfe2ff; color: #084298; }
+    .badge-high   { background: #f8d7da; color: #842029; }
+
+    .leaderboard-rank { font-size: 1.4rem; font-weight: 700; color: #1a3a5c; width: 40px; }
+    .rank-1 { color: #f5c518; }
+    .rank-2 { color: #adb5bd; }
+    .rank-3 { color: #cd7f32; }
+
+    @media (max-width: 768px) {
+      .sidebar { width: 100%; min-height: auto; position: relative; }
+      .main-content { margin-left: 0; }
+    }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+{% if user.is_authenticated %}
+<div class="sidebar">
+  <div class="brand">EDAWN <span>Portal</span></div>
+  <nav class="nav flex-column pt-2">
+    <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+      <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+    <a href="{% url 'task_list' %}" class="nav-link {% if 'task' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="bi bi-check2-square"></i> My Tasks
+    </a>
+    <a href="{% url 'goal_list' %}" class="nav-link {% if 'goal' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="bi bi-bullseye"></i> My Goals
+    </a>
+    <a href="{% url 'leaderboard' %}" class="nav-link {% if request.resolver_match.url_name == 'leaderboard' %}active{% endif %}">
+      <i class="bi bi-trophy"></i> Leaderboard
+    </a>
+    {% if user.is_staff %}
+    <hr class="mx-3 my-1" style="border-color:rgba(255,255,255,.2)">
+    <a href="{% url 'admin:index' %}" class="nav-link">
+      <i class="bi bi-shield-lock"></i> Admin
+    </a>
+    {% endif %}
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="nav-link text-white-50" style="font-size:.8rem; padding:.4rem 1.5rem;">
+      Signed in as <strong class="text-white">{{ user.username }}</strong>
+    </div>
+    <a href="{% url 'logout' %}" class="nav-link">
+      <i class="bi bi-box-arrow-left"></i> Logout
+    </a>
+  </div>
+</div>
+
+<div class="main-content">
+  {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  {% endif %}
+  {% block content %}{% endblock %}
+</div>
+
+{% else %}
+<div class="container">
+  {% block auth_content %}{% endblock %}
+</div>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>
