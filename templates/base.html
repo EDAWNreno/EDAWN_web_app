@@ -130,7 +130,8 @@
 
     @media (max-width: 768px) {
       .sidebar { width: 100%; min-height: auto; position: relative; }
-      .main-content { margin-left: 0; }
+      .sidebar .brand { padding: .75rem 1rem; }
+      .main-content { margin-left: 0; padding: 1.25rem; }
     }
   </style>
   {% block extra_css %}{% endblock %}
@@ -139,43 +140,53 @@
 
 {% if user.is_authenticated %}
 <div class="sidebar">
-  <div class="brand">
-    <img src="{% static 'img/edawn-logo-white.png' %}" alt="EDAWN" style="max-width:160px; height:auto;">
-    <span style="display:block; font-size:.75rem; margin-top:.25rem;">Business Builders Portal</span>
-  </div>
-  <nav class="nav flex-column pt-2">
-    <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-      <i class="bi bi-speedometer2"></i> Dashboard
-    </a>
-    <a href="{% url 'company_list' %}" class="nav-link {% if 'company' in request.resolver_match.url_name %}active{% endif %}">
-      <i class="bi bi-building"></i> My Companies
-    </a>
-    <a href="{% url 'badge_list' %}" class="nav-link {% if 'badge' in request.resolver_match.url_name %}active{% endif %}">
-      <i class="bi bi-award"></i> Badges
-    </a>
-    <a href="{% url 'leaderboard' %}" class="nav-link {% if request.resolver_match.url_name == 'leaderboard' %}active{% endif %}">
-      <i class="bi bi-trophy"></i> Leaderboard
-    </a>
-    <a href="{% url 'message_list' %}" class="nav-link {% if 'message' in request.resolver_match.url_name %}active{% endif %}">
-      <i class="bi bi-chat-square-text"></i> Messages
-    </a>
-    {% if user.is_staff %}
-    <hr class="mx-3 my-1" style="border-color:rgba(255,255,255,.2)">
-    <a href="{% url 'admin:index' %}" class="nav-link">
-      <i class="bi bi-shield-lock"></i> Admin
-    </a>
-    {% endif %}
-  </nav>
-  <div class="sidebar-bottom">
-    <div class="nav-link text-white-50" style="font-size:.8rem; padding:.4rem 1.5rem;">
-      Signed in as <strong class="text-white">{{ user.username }}</strong>
+  <div class="brand d-flex align-items-center justify-content-between">
+    <div>
+      <img src="{% static 'img/edawn-logo-white.png' %}" alt="EDAWN" style="max-width:160px; height:auto;">
+      <span style="display:block; font-size:.75rem; margin-top:.25rem;">Business Builders Portal</span>
     </div>
-    <form method="post" action="{% url 'logout' %}" style="margin:0;">
-      {% csrf_token %}
-      <button type="submit" class="nav-link" style="background:none; border:none; width:100%; text-align:left; cursor:pointer;">
-        <i class="bi bi-box-arrow-left"></i> Logout
-      </button>
-    </form>
+    <button class="d-md-none btn p-1" type="button"
+            data-bs-toggle="collapse" data-bs-target="#sidebarNav"
+            aria-expanded="false" aria-controls="sidebarNav"
+            style="color:rgba(255,255,255,.8); border:none; line-height:1;">
+      <i class="bi bi-list" style="font-size:1.6rem;"></i>
+    </button>
+  </div>
+  <div class="collapse d-md-block" id="sidebarNav">
+    <nav class="nav flex-column pt-2">
+      <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+      </a>
+      <a href="{% url 'company_list' %}" class="nav-link {% if 'company' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-building"></i> My Companies
+      </a>
+      <a href="{% url 'badge_list' %}" class="nav-link {% if 'badge' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-award"></i> Badges
+      </a>
+      <a href="{% url 'leaderboard' %}" class="nav-link {% if request.resolver_match.url_name == 'leaderboard' %}active{% endif %}">
+        <i class="bi bi-trophy"></i> Leaderboard
+      </a>
+      <a href="{% url 'message_list' %}" class="nav-link {% if 'message' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-chat-square-text"></i> Messages
+      </a>
+      {% if user.is_staff %}
+      <hr class="mx-3 my-1" style="border-color:rgba(255,255,255,.2)">
+      <a href="{% url 'admin:index' %}" class="nav-link">
+        <i class="bi bi-shield-lock"></i> Admin
+      </a>
+      {% endif %}
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="nav-link text-white-50" style="font-size:.8rem; padding:.4rem 1.5rem;">
+        Signed in as <strong class="text-white">{{ user.username }}</strong>
+      </div>
+      <form method="post" action="{% url 'logout' %}" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="nav-link" style="background:none; border:none; width:100%; text-align:left; cursor:pointer;">
+          <i class="bi bi-box-arrow-left"></i> Logout
+        </button>
+      </form>
+    </div>
   </div>
 </div>
 
