@@ -170,7 +170,7 @@ def create_admin(request):
             return redirect('create_admin')
     else:
         form = CreateAdminForm()
-    admins = User.objects.filter(is_staff=True).order_by('username')
+    admins = list(User.objects.filter(is_staff=True).order_by('username'))
     return render(request, 'core/admin_create_admin.html', {'form': form, 'admins': admins})
 
 
