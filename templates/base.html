@@ -146,10 +146,10 @@
 {% if user.is_authenticated %}
 <div class="sidebar">
   <div class="brand d-flex align-items-center justify-content-between">
-    <div>
+    <a href="{% url 'landing' %}" style="text-decoration:none;">
       <img src="{% static 'img/edawn-logo-white.png' %}" alt="EDAWN" style="max-width:160px; height:auto;">
-      <span style="display:block; font-size:.75rem; margin-top:.25rem;">Business Builders Portal</span>
-    </div>
+      <span style="display:block; font-size:.75rem; margin-top:.25rem; color:var(--edawn-teal);">Business Builders Portal</span>
+    </a>
     <button class="d-md-none btn p-1" type="button"
             data-bs-toggle="collapse" data-bs-target="#sidebarNav"
             aria-expanded="false" aria-controls="sidebarNav"
@@ -185,6 +185,9 @@
       <div class="nav-link text-white-50" style="font-size:.8rem; padding:.4rem 1.5rem;">
         Signed in as <strong class="text-white">{{ user.username }}</strong>
       </div>
+      <a href="{% url 'landing' %}" class="nav-link" style="font-size:.85rem;">
+        <i class="bi bi-info-circle"></i> About the Program
+      </a>
       <form method="post" action="{% url 'logout' %}" style="margin:0;">
         {% csrf_token %}
         <button type="submit" class="nav-link" style="background:none; border:none; width:100%; text-align:left; cursor:pointer;">
