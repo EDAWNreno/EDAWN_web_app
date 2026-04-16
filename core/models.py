@@ -1,4 +1,5 @@
 import uuid
+from urllib.parse import quote_plus
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -39,6 +40,14 @@ class Company(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def maps_url(self):
+        parts = filter(None, [self.address, self.city, self.state, self.zip_code])
+        query = ', '.join(parts)
+        if not query:
+            return None
+        return f'https://www.google.com/maps/search/?api=1&query={quote_plus(query)}'
 
     @property
     def active_assignment(self):

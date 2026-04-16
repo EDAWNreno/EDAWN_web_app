@@ -64,6 +64,13 @@
                 {{ assignment.company.city }}{% if assignment.company.state %}, {{ assignment.company.state }}{% endif %}
               {% else %}—{% endif %}
             </small>
+            {% if assignment.company.maps_url %}
+            <a href="{{ assignment.company.maps_url }}" target="_blank" rel="noopener"
+               class="ms-1 text-decoration-none" style="color:var(--edawn-teal);"
+               title="Open in Google Maps">
+              <i class="bi bi-map"></i>
+            </a>
+            {% endif %}
           </td>
           <td><small class="text-muted">{{ assignment.company.industry|default:"—" }}</small></td>
           <td class="text-center">

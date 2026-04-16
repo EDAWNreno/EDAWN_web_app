@@ -43,6 +43,14 @@
             {% if company.address %}{{ company.address }}<br>{% endif %}
             {% if company.city %}{{ company.city }}{% if company.state %}, {{ company.state }}{% endif %}
               {% if company.zip_code %} {{ company.zip_code }}{% endif %}{% endif %}
+            {% if company.maps_url %}
+            <div class="mt-1">
+              <a href="{{ company.maps_url }}" target="_blank" rel="noopener"
+                 class="text-decoration-none small" style="color:var(--edawn-teal);">
+                <i class="bi bi-map me-1"></i>Open in Google Maps
+              </a>
+            </div>
+            {% endif %}
           </dd>
           {% endif %}
 
