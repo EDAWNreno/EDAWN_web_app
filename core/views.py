@@ -8,7 +8,7 @@ from django.db.models import Count, Q
 
 from .models import Company, Assignment, ContactAttempt, InviteCode, VisitNote, Badge, UserBadge, Message, Reply
 from .forms import (RegisterForm, ContactAttemptForm, VisitNoteForm, MessageForm, ReplyForm,
-                     QuickCompanyForm, QuickAssignForm)
+                     QuickCompanyForm, QuickAssignForm, CreateAdminForm)
 from .ratelimit import ratelimit
 
 
@@ -156,6 +156,22 @@ def quick_assign(request):
         form = QuickAssignForm()
     recent = Assignment.objects.select_related('company', 'volunteer').order_by('-assigned_date')[:5]
     return render(request, 'core/admin_assign.html', {'form': form, 'recent': recent})
+
+
+@staff_member_required
+def create_admin(request):
+    if request.method == 'POST':
+        form = CreateAdminForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            label = user.get_full_name() or user.username
+            role  = 'Superuser' if user.is_superuser else 'Admin'
+            messages.success(request, f'{role} account created for {label}.')
+            return redirect('create_admin')
+    else:
+        form = CreateAdminForm()
+    admins = User.objects.filter(is_staff=True).order_by('username')
+    return render(request, 'core/admin_create_admin.html', {'form': form, 'admins': admins})
 
 
 @staff_member_required

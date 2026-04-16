@@ -13,9 +13,10 @@ urlpatterns = [
     path('', views.dashboard, name='dashboard'),
 
     # Admin quick actions (staff only)
-    path('admin-actions/add-company/', views.quick_add_company, name='quick_add_company'),
-    path('admin-actions/assign/',      views.quick_assign,      name='quick_assign'),
-    path('admin-actions/invite/',      views.quick_invite,      name='quick_invite'),
+    path('admin-actions/add-company/',  views.quick_add_company, name='quick_add_company'),
+    path('admin-actions/assign/',       views.quick_assign,      name='quick_assign'),
+    path('admin-actions/invite/',       views.quick_invite,      name='quick_invite'),
+    path('admin-actions/create-admin/', views.create_admin,      name='create_admin'),
 
     # Companies
     path('companies/',                      views.company_list,         name='company_list'),

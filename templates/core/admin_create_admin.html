@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Create Admin Account – EDAWN{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-1">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+      <li class="breadcrumb-item active">Create Admin Account</li>
+    </ol>
+  </nav>
+  <h4 class="mb-0 fw-bold"><i class="bi bi-person-gear me-2"></i>Create Admin Account</h4>
+</div>
+
+<div class="row g-4">
+
+  <!-- Form -->
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header py-3">
+        <span><i class="bi bi-person-plus me-2"></i>New Admin Details</span>
+      </div>
+      <div class="card-body p-4">
+        {% if messages %}
+          {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+          {% endfor %}
+        {% endif %}
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">First Name</label>
+              {{ form.first_name }}
+              {% if form.first_name.errors %}
+                <div class="text-danger small mt-1">{{ form.first_name.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Last Name</label>
+              {{ form.last_name }}
+              {% if form.last_name.errors %}
+                <div class="text-danger small mt-1">{{ form.last_name.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Username <span class="text-danger">*</span></label>
+            {{ form.username }}
+            {% if form.username.errors %}
+              <div class="text-danger small mt-1">{{ form.username.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
+            {{ form.email }}
+            {% if form.email.errors %}
+              <div class="text-danger small mt-1">{{ form.email.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Password <span class="text-danger">*</span></label>
+              {{ form.password1 }}
+              {% if form.password1.errors %}
+                <div class="text-danger small mt-1">{{ form.password1.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Confirm Password <span class="text-danger">*</span></label>
+              {{ form.password2 }}
+              {% if form.password2.errors %}
+                <div class="text-danger small mt-1">{{ form.password2.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mb-4 p-3 rounded" style="background:var(--edawn-blue-light);">
+            <div class="form-check">
+              {{ form.is_superuser }}
+              <label class="form-check-label fw-semibold ms-1" for="{{ form.is_superuser.id_for_label }}">
+                {{ form.is_superuser.label }}
+              </label>
+            </div>
+            <div class="text-muted small mt-1 ms-4">{{ form.is_superuser.help_text }}</div>
+          </div>
+
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary btn-lg">
+              <i class="bi bi-person-check me-2"></i>Create Admin Account
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Current Admins -->
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header py-3">
+        <span><i class="bi bi-shield-lock me-2"></i>Current Admin Accounts</span>
+        <span class="badge ms-2" style="background:var(--edawn-teal);">{{ admins.count }}</span>
+      </div>
+      <div class="card-body p-0">
+        {% if admins %}
+        <ul class="list-group list-group-flush">
+          {% for admin in admins %}
+          <li class="list-group-item py-3 px-3">
+            <div class="d-flex align-items-center gap-3">
+              <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                   style="width:38px; height:38px; background:{% if admin.is_superuser %}var(--edawn-blue-light){% else %}var(--edawn-teal-light){% endif %};">
+                <i class="bi bi-{% if admin.is_superuser %}shield-fill-check{% else %}person-fill-gear{% endif %}"
+                   style="color:{% if admin.is_superuser %}var(--edawn-blue){% else %}var(--edawn-teal){% endif %};"></i>
+              </div>
+              <div class="flex-grow-1 min-width-0">
+                <div class="fw-semibold text-truncate" style="color:var(--edawn-blue);">
+                  {{ admin.get_full_name|default:admin.username }}
+                </div>
+                <div class="text-muted small text-truncate">@{{ admin.username }}</div>
+              </div>
+              <div>
+                {% if admin.is_superuser %}
+                  <span class="badge" style="background:var(--edawn-blue); font-size:.7rem;">Superuser</span>
+                {% else %}
+                  <span class="badge" style="background:var(--edawn-teal); font-size:.7rem;">Admin</span>
+                {% endif %}
+              </div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted text-center small py-3">No admin accounts found.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-body">
+        <h6 class="fw-bold mb-2" style="color:var(--edawn-blue);">
+          <i class="bi bi-info-circle me-1"></i>Access Levels
+        </h6>
+        <div class="d-flex align-items-start gap-2 mb-2">
+          <span class="badge mt-1" style="background:var(--edawn-teal); font-size:.7rem; flex-shrink:0;">Admin</span>
+          <small class="text-muted">Can access all staff-only features in this portal (quick actions, admin panel view).</small>
+        </div>
+        <div class="d-flex align-items-start gap-2">
+          <span class="badge mt-1" style="background:var(--edawn-blue); font-size:.7rem; flex-shrink:0;">Superuser</span>
+          <small class="text-muted">Full Django admin access — can manage all users, models, and permissions.</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

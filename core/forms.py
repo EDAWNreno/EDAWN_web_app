@@ -128,6 +128,37 @@ class ReplyForm(forms.ModelForm):
 # Admin (portal-side)
 # ---------------------------------------------------------------------------
 
+class CreateAdminForm(UserCreationForm):
+    first_name   = forms.CharField(max_length=50, required=False,
+                                   widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First name'}))
+    last_name    = forms.CharField(max_length=50, required=False,
+                                   widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Last name'}))
+    email        = forms.EmailField(required=True,
+                                    widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email address'}))
+    is_superuser = forms.BooleanField(required=False, label='Grant superuser privileges',
+                                      help_text='Superusers have full access including the Django admin panel.',
+                                      widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
+
+    class Meta:
+        model  = User
+        fields = ('username', 'first_name', 'last_name', 'email', 'password1', 'password2')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name in ('username', 'password1', 'password2'):
+            self.fields[field_name].widget.attrs['class'] = 'form-control'
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email        = self.cleaned_data['email']
+        user.first_name   = self.cleaned_data.get('first_name', '')
+        user.last_name    = self.cleaned_data.get('last_name', '')
+        user.is_staff     = True
+        user.is_superuser = self.cleaned_data.get('is_superuser', False)
+        if commit:
+            user.save()
+        return user
+
 class QuickCompanyForm(forms.ModelForm):
     class Meta:
         model  = Company
