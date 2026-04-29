@@ -10,24 +10,46 @@
 <!-- Filter bar -->
 <div class="card mb-4">
   <div class="card-body py-2">
-    <div class="d-flex gap-2 flex-wrap align-items-center">
-      <span class="text-muted small me-1">Filter:</span>
-      <a href="?status=active"
-         class="btn btn-sm {% if status_filter == 'active' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-        Active
-      </a>
-      <a href="?status=completed"
-         class="btn btn-sm {% if status_filter == 'completed' %}btn-success{% else %}btn-outline-secondary{% endif %}">
-        Visited
-      </a>
-      <a href="?status=lost"
-         class="btn btn-sm {% if status_filter == 'lost' %}btn-danger{% else %}btn-outline-secondary{% endif %}">
-        Lost
-      </a>
-      <a href="?status=all"
-         class="btn btn-sm {% if status_filter == 'all' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
-        All
-      </a>
+    <div class="d-flex gap-3 flex-wrap align-items-center">
+
+      <!-- Status filter -->
+      <div class="d-flex gap-2 flex-wrap align-items-center">
+        <span class="text-muted small me-1">Status:</span>
+        <a href="?status=active{% if industry_filter %}&industry={{ industry_filter }}{% endif %}"
+           class="btn btn-sm {% if status_filter == 'active' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+          Active
+        </a>
+        <a href="?status=completed{% if industry_filter %}&industry={{ industry_filter }}{% endif %}"
+           class="btn btn-sm {% if status_filter == 'completed' %}btn-success{% else %}btn-outline-secondary{% endif %}">
+          Visited
+        </a>
+        <a href="?status=lost{% if industry_filter %}&industry={{ industry_filter }}{% endif %}"
+           class="btn btn-sm {% if status_filter == 'lost' %}btn-danger{% else %}btn-outline-secondary{% endif %}">
+          Lost
+        </a>
+        <a href="?status=all{% if industry_filter %}&industry={{ industry_filter }}{% endif %}"
+           class="btn btn-sm {% if status_filter == 'all' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+          All
+        </a>
+      </div>
+
+      <!-- Industry filter (only shown when volunteer has multiple industries) -->
+      {% if industries %}
+      <div class="d-flex gap-2 align-items-center ms-auto">
+        <span class="text-muted small">Industry:</span>
+        <form method="get" class="d-inline">
+          <input type="hidden" name="status" value="{{ status_filter }}">
+          <select name="industry" class="form-select form-select-sm"
+                  style="min-width:160px;" onchange="this.form.submit()">
+            <option value="">All industries</option>
+            {% for ind in industries %}
+            <option value="{{ ind }}" {% if industry_filter == ind %}selected{% endif %}>{{ ind }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      </div>
+      {% endif %}
+
     </div>
   </div>
 </div>

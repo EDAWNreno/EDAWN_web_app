@@ -176,6 +176,38 @@
             <span class="text-muted small">{{ note.visit_date|date:"M d, Y g:i A" }}</span>
           </div>
           <p class="mb-2">{{ note.notes }}</p>
+
+          {% if note.expansion_adding_sq_footage or note.expansion_new_building or note.expansion_adding_equipment or note.expansion_capex_planned %}
+          <div class="mb-2">
+            <div class="d-flex flex-wrap gap-1 align-items-center">
+              <span class="text-muted small me-1"><i class="bi bi-graph-up-arrow"></i> Expansion:</span>
+              {% if note.expansion_adding_sq_footage %}
+              <span class="badge rounded-pill bg-info text-dark small">Adding SF</span>
+              {% endif %}
+              {% if note.expansion_new_building %}
+              <span class="badge rounded-pill bg-info text-dark small">New Building</span>
+              {% endif %}
+              {% if note.expansion_adding_equipment %}
+              <span class="badge rounded-pill bg-info text-dark small">Adding Equipment</span>
+              {% endif %}
+              {% if note.expansion_capex_planned %}
+              <span class="badge rounded-pill bg-info text-dark small">CapEx Planned</span>
+              {% endif %}
+            </div>
+            {% if note.expansion_notes %}
+            <div class="text-muted small mt-1 ms-1">{{ note.expansion_notes }}</div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          {% if note.received_business_lead %}
+          <div class="mb-2">
+            <span class="badge rounded-pill bg-success small">
+              <i class="bi bi-briefcase me-1"></i>Business lead received
+            </span>
+          </div>
+          {% endif %}
+
           {% if note.follow_up_needed %}
           <div class="alert alert-warning py-2 px-3 mb-0 small">
             <i class="bi bi-flag-fill me-1"></i>

@@ -191,7 +191,9 @@ def quick_invite(request):
 
 @login_required
 def company_list(request):
-    status_filter = request.GET.get('status', 'active')
+    status_filter   = request.GET.get('status', 'active')
+    industry_filter = request.GET.get('industry', '')
+
     assignments = Assignment.objects.filter(volunteer=request.user).select_related('company')
 
     if status_filter == 'active':
@@ -202,9 +204,23 @@ def company_list(request):
         assignments = assignments.filter(status=Assignment.STATUS_LOST)
     # 'all' returns everything
 
+    if industry_filter:
+        assignments = assignments.filter(company__industry=industry_filter)
+
+    # Distinct industries from this volunteer's assignments for the filter dropdown
+    industries = (
+        Assignment.objects.filter(volunteer=request.user)
+        .exclude(company__industry='')
+        .values_list('company__industry', flat=True)
+        .distinct()
+        .order_by('company__industry')
+    )
+
     context = {
-        'assignments':   assignments.order_by('company__name'),
-        'status_filter': status_filter,
+        'assignments':     assignments.order_by('company__name'),
+        'status_filter':   status_filter,
+        'industry_filter': industry_filter,
+        'industries':      industries,
     }
     return render(request, 'core/company_list.html', context)
 
