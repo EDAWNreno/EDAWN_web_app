@@ -2,19 +2,23 @@
 Management command: python manage.py seed_data
 
 Creates realistic test data:
-  - 6 volunteer users
-  - 30 companies (varying levels of info)
+  - 6 volunteer users (password: edawn2024)
+  - 1 staff/admin user (password: edawn2024)
+  - 30 companies across multiple industries
   - Assignments spread across volunteers
   - Contact attempts (some leading to Lost)
-  - Visit notes (marking companies Visited)
+  - Visit notes with expansion flags and business lead tracking
   - Badges auto-awarded based on activity
+
+Options:
+  --reset   Wipe all existing companies, assignments, and visit data first
 """
 
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from core.models import Assignment, Company, ContactAttempt, VisitNote
+from core.models import Assignment, Company, ContactAttempt, VisitNote, Message, UserBadge
 from core.badges import check_and_award_badges
 
 
@@ -62,15 +66,46 @@ COMPANIES = [
 ]
 
 
-VISIT_NOTES_TEXTS = [
-    "Met with the operations manager. Company is actively hiring and interested in EDAWN's workforce development programs. Follow-up with training info requested.",
-    "Spoke with owner directly. Business has grown 20% this year. Open to future partnerships and events. Very receptive to our outreach.",
-    "Toured the facility. About 45 employees on site. They use local suppliers and expressed interest in our supplier network program.",
-    "Quick visit — GM was busy but friendly. Left materials. They will review and may attend next quarterly event.",
-    "Had a great 45-minute conversation with the director. They're planning to expand and want to know more about incentive programs. Set up a follow-up call.",
-    "Visited during lunch rush. Owner said things are going well. Small operation, not in immediate need of services but appreciates the outreach.",
-    "Met the HR director who was very interested in our job fair. Committed to participating in the next one. Will send company profile.",
-    "Company is newer — only 2 years old. Founder gave a tour of the space. Interested in networking events to meet other businesses.",
+# (notes, follow_up_needed, follow_up_notes,
+#  adding_sf, new_building, adding_equipment, capex_planned, expansion_notes,
+#  received_lead)
+VISIT_DATA = [
+    (
+        "Met with the operations manager. Company is actively hiring — up 12 employees this quarter. Very interested in EDAWN's workforce development programs.",
+        True, "Send workforce training program brochure and invite to next quarterly event.",
+        True, False, False, True, "Planning a 8,000 sq ft warehouse addition in Q3. CapEx budget of approx $2M already approved.",
+        True,
+    ),
+    (
+        "Spoke with owner directly. Business has grown 20% this year and they are at capacity in their current space. Open to future partnerships.",
+        False, "",
+        False, True, False, False, "Actively looking at two buildings on Kietzke Ln. Hoping to move within 18 months.",
+        False,
+    ),
+    (
+        "Toured the facility. About 45 employees on site. They use local suppliers and expressed interest in our supplier network program.",
+        False, "",
+        False, False, True, False, "Purchasing two new CNC machines this fall.",
+        False,
+    ),
+    (
+        "Quick visit — GM was in a meeting but assistant gave a brief overview. Left materials. They will review and may attend next quarterly event.",
+        True, "Circle back in 30 days — GM wanted to connect directly.",
+        False, False, False, False, "",
+        True,
+    ),
+    (
+        "Great 45-minute conversation with the director. They are planning to expand and want to know more about incentive programs. Very engaged.",
+        False, "",
+        True, True, True, True, "Major expansion planned: adding 15,000 sq ft, moving to new building, upgrading all production equipment. CapEx estimated $5M+.",
+        False,
+    ),
+    (
+        "Visited during lunch service. Owner said things are going well. Small operation, not in immediate need of services but appreciates the outreach.",
+        False, "",
+        False, False, False, False, "",
+        False,
+    ),
 ]
 
 CONTACT_NOTES_TEXTS = [
@@ -86,8 +121,39 @@ CONTACT_NOTES_TEXTS = [
 class Command(BaseCommand):
     help = "Populate the database with realistic test data"
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--reset',
+            action='store_true',
+            help='Delete all existing companies, assignments, visit notes, and messages before seeding.',
+        )
+
     def handle(self, *args, **options):
+        if options['reset']:
+            self.stdout.write("  Resetting existing data...")
+            Message.objects.all().delete()
+            UserBadge.objects.all().delete()
+            VisitNote.objects.all().delete()
+            ContactAttempt.objects.all().delete()
+            Assignment.objects.all().delete()
+            Company.objects.all().delete()
+            User.objects.filter(is_staff=False).delete()
+            self.stdout.write("  Reset complete.")
+
         self.stdout.write("Seeding test data...")
+
+        # ----------------------------------------------------------------
+        # Admin user
+        # ----------------------------------------------------------------
+        admin, created = User.objects.get_or_create(
+            username='kim',
+            defaults=dict(first_name='Kim', last_name='Yaeger', email='kyaeger@edawn.org',
+                          is_staff=True, is_superuser=True),
+        )
+        if created:
+            admin.set_password('edawn2024')
+            admin.save()
+            self.stdout.write("  Admin user 'kim' created")
 
         # ----------------------------------------------------------------
         # Volunteers
@@ -103,8 +169,6 @@ class Command(BaseCommand):
                 user.save()
             volunteers.append(user)
         self.stdout.write(f"  {len(volunteers)} volunteers ready")
-
-        admin = User.objects.filter(is_superuser=True).first()
 
         # ----------------------------------------------------------------
         # Companies
@@ -126,12 +190,14 @@ class Command(BaseCommand):
         # ----------------------------------------------------------------
         # Assignments — spread companies across volunteers
         # Scenario breakdown across 30 companies:
-        #   6  visited
-        #   4  lost (3 contact attempts each)
-        #   20 active (various contact attempt counts)
+        #   6  visited  (with varied expansion flags and business leads)
+        #   4  lost     (3 contact attempts each)
+        #   5  active   with 2 attempts (warning zone)
+        #   5  active   with 1 attempt
+        #  10  active   with no attempts yet
         # ----------------------------------------------------------------
         if Assignment.objects.exists():
-            self.stdout.write("  Assignments already exist — skipping assignment seeding.")
+            self.stdout.write("  Assignments already exist — run with --reset to reseed.")
             self.stdout.write(self.style.SUCCESS("Done."))
             return
 
@@ -148,27 +214,33 @@ class Command(BaseCommand):
             )
 
             if i < 6:
-                # --- Visited ---
-                note_text = VISIT_NOTES_TEXTS[i % len(VISIT_NOTES_TEXTS)]
+                # --- Visited: use VISIT_DATA for varied expansion/lead fields ---
+                (notes, follow_up, follow_up_notes,
+                 adding_sf, new_building, adding_equip, capex,
+                 expansion_notes, lead) = VISIT_DATA[i]
                 VisitNote.objects.create(
                     assignment=assignment,
                     visited_by=volunteer,
-                    notes=note_text,
-                    follow_up_needed=(i % 3 == 0),
-                    follow_up_notes="Send program brochure and invite to next networking event." if i % 3 == 0 else "",
+                    notes=notes,
+                    follow_up_needed=follow_up,
+                    follow_up_notes=follow_up_notes,
+                    expansion_adding_sq_footage=adding_sf,
+                    expansion_new_building=new_building,
+                    expansion_adding_equipment=adding_equip,
+                    expansion_capex_planned=capex,
+                    expansion_notes=expansion_notes,
+                    received_business_lead=lead,
                 )
 
             elif i < 10:
                 # --- Lost (3 attempts) ---
                 for j in range(3):
-                    methods = ['phone', 'email', 'in_person']
                     ContactAttempt.objects.create(
                         assignment=assignment,
                         attempted_by=volunteer,
-                        method=methods[j % 3],
+                        method=['phone', 'email', 'in_person'][j % 3],
                         notes=CONTACT_NOTES_TEXTS[j % len(CONTACT_NOTES_TEXTS)],
                     )
-                # Status set automatically by ContactAttempt.save()
 
             elif i < 15:
                 # --- Active with 2 attempts (warning zone) ---
@@ -189,20 +261,35 @@ class Command(BaseCommand):
                     notes=CONTACT_NOTES_TEXTS[0],
                 )
 
-            # else: active with no attempts yet
+            # i >= 20: active with no attempts yet
 
         # Award badges based on seeded activity
         for vol in volunteers:
-            earned = check_and_award_badges(vol)
-            if earned:
-                self.stdout.write(f"  {vol.username} earned: {', '.join(b.name for b in earned)}")
+            check_and_award_badges(vol)
 
         counts = {
             "visited": Assignment.objects.filter(status="completed").count(),
             "lost":    Assignment.objects.filter(status="lost").count(),
             "active":  Assignment.objects.filter(status="active").count(),
         }
+        expansion_visits = VisitNote.objects.filter(
+            expansion_adding_sq_footage=True
+        ).count() + VisitNote.objects.filter(
+            expansion_new_building=True
+        ).count() + VisitNote.objects.filter(
+            expansion_adding_equipment=True
+        ).count() + VisitNote.objects.filter(
+            expansion_capex_planned=True
+        ).count()
+        lead_visits = VisitNote.objects.filter(received_business_lead=True).count()
+
         self.stdout.write(
             f"  Assignments — {counts['visited']} visited, {counts['lost']} lost, {counts['active']} active"
         )
-        self.stdout.write(self.style.SUCCESS("Done! Log in with any volunteer (password: edawn2024)"))
+        self.stdout.write(f"  Visit notes with expansion flags: {expansion_visits} flags across {VisitNote.objects.count()} visits")
+        self.stdout.write(f"  Visit notes with business lead: {lead_visits}")
+        self.stdout.write(self.style.SUCCESS(
+            "\nDone! Credentials (all passwords: edawn2024):\n"
+            "  Admin : kim\n"
+            "  Volunteers: jsmith, mjohnson, aproctor, twilliams, slee, dgarcia"
+        ))
