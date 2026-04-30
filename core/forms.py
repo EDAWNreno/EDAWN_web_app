@@ -91,25 +91,18 @@ class VisitNoteForm(forms.ModelForm):
     class Meta:
         model  = VisitNote
         fields = (
-            # Contact
             'contact_name',
             'additional_contact_name', 'additional_contact_title',
             'additional_contact_phone', 'additional_contact_email',
-            # Notes
             'notes',
-            # Workforce
             'hiring_status',
             'employee_count', 'jobs_added_expected',
             'jobs_added_last_year', 'jobs_lost_last_year',
-            # Facility
             'building_size_sqft', 'at_capacity',
-            # Expansion
             'expansion_adding_sq_footage', 'expansion_new_building',
             'expansion_adding_equipment', 'expansion_capex_planned',
             'expansion_notes',
-            # Volunteer impact
             'volunteer_helped', 'volunteer_helped_notes',
-            # Lead + follow-up
             'received_business_lead',
             'follow_up_needed', 'follow_up_notes',
         )
@@ -121,33 +114,28 @@ class VisitNoteForm(forms.ModelForm):
             'additional_contact_email': forms.EmailInput(attrs={**_fc, 'placeholder': 'Email'}),
             'notes': forms.Textarea(attrs={**_fc, 'rows': 5,
                 'placeholder': 'What did you learn? What was the general tone of the conversation?'}),
-            'hiring_status':       forms.Select(attrs=_fs),
-            'employee_count':      forms.NumberInput(attrs={**_fc, 'placeholder': 'e.g. 45', 'min': 0}),
-            'jobs_added_expected': forms.NumberInput(attrs={**_fc, 'placeholder': 'e.g. 10', 'min': 0}),
-            'jobs_added_last_year': forms.NumberInput(attrs={**_fc, 'placeholder': 'e.g. 5',  'min': 0}),
-            'jobs_lost_last_year':  forms.NumberInput(attrs={**_fc, 'placeholder': 'e.g. 2',  'min': 0}),
-            'building_size_sqft': forms.NumberInput(attrs={**_fc, 'placeholder': 'e.g. 12000', 'min': 0}),
-            'at_capacity':        forms.Select(attrs=_fs),
+            'hiring_status':        forms.Select(attrs=_fs),
+            'employee_count':       forms.NumberInput(attrs={**_fc, 'placeholder': 'e.g. 45',    'min': 0}),
+            'jobs_added_expected':  forms.NumberInput(attrs={**_fc, 'placeholder': 'e.g. 10',    'min': 0}),
+            'jobs_added_last_year': forms.NumberInput(attrs={**_fc, 'placeholder': 'e.g. 5',     'min': 0}),
+            'jobs_lost_last_year':  forms.NumberInput(attrs={**_fc, 'placeholder': 'e.g. 2',     'min': 0}),
+            'building_size_sqft':   forms.NumberInput(attrs={**_fc, 'placeholder': 'e.g. 12000', 'min': 0}),
+            'at_capacity':          forms.Select(attrs=_fs),
             'expansion_adding_sq_footage': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'expansion_new_building':      forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'expansion_adding_equipment':  forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'expansion_capex_planned':     forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'expansion_notes': forms.Textarea(attrs={**_fc, 'rows': 2,
+            'expansion_notes':        forms.Textarea(attrs={**_fc, 'rows': 2,
                 'placeholder': 'Additional expansion details (optional)'}),
             'volunteer_helped':       forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'volunteer_helped_notes': forms.Textarea(attrs={**_fc, 'rows': 3,
-                'placeholder': 'Describe how you helped...'}),
+                'placeholder': 'Describe how you assisted...'}),
             'received_business_lead': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'follow_up_needed': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'follow_up_notes':  forms.Textarea(attrs={**_fc, 'rows': 3,
+            'follow_up_needed':       forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'follow_up_notes':        forms.Textarea(attrs={**_fc, 'rows': 3,
                 'placeholder': 'Describe the follow-up needed (optional)'}),
         }
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['hiring_status'].required = True
-        self.fields['hiring_status'].empty_label = None
-
-    labels = {
+        labels = {
             'contact_name':            'Who did you speak with?',
             'additional_contact_name': 'Name',
             'notes':                   'Visit Notes',
@@ -163,12 +151,17 @@ class VisitNoteForm(forms.ModelForm):
             'expansion_adding_equipment':  'Adding equipment',
             'expansion_capex_planned':     'Capital expenditure planned',
             'expansion_notes':             'Expansion details',
-            'volunteer_helped':       'I assisted this company with a problem during this visit',
-            'volunteer_helped_notes': 'How did you assist?',
-            'received_business_lead': 'I received a business lead or referral from this visit',
-            'follow_up_needed':       'Follow-up needed?',
-            'follow_up_notes':        'Follow-up Details',
+            'volunteer_helped':            'I assisted this company with a problem during this visit',
+            'volunteer_helped_notes':      'How did you assist?',
+            'received_business_lead':      'I received a business lead or referral from this visit',
+            'follow_up_needed':            'Follow-up needed?',
+            'follow_up_notes':             'Follow-up Details',
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Required on form but blank=True on model to allow existing rows without a value
+        self.fields['hiring_status'].required = True
 
 
 # ---------------------------------------------------------------------------

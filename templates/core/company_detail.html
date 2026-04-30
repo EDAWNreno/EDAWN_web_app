@@ -99,7 +99,7 @@
         <button class="btn btn-outline-secondary" type="button"
                 data-bs-toggle="collapse" data-bs-target="#contactForm" aria-expanded="false">
           <i class="bi bi-telephone me-1"></i> Log Contact Attempt
-          <span class="badge bg-secondary ms-1">{{ contact_attempts.count }}/3</span>
+          <span class="badge bg-secondary ms-1">{{ contact_attempts_count }}/3</span>
         </button>
 
         <div class="collapse" id="contactForm">
@@ -293,10 +293,10 @@
       <div class="card-header py-3 d-flex justify-content-between align-items-center">
         <span><i class="bi bi-telephone-x me-2"></i>Contact Attempts</span>
         <span class="badge rounded-pill
-          {% if contact_attempts.count >= 3 %}bg-danger
-          {% elif contact_attempts.count == 2 %}bg-warning text-dark
+          {% if contact_attempts_count >= 3 %}bg-danger
+          {% elif contact_attempts_count == 2 %}bg-warning text-dark
           {% else %}bg-secondary{% endif %}">
-          {{ contact_attempts.count }} / 3
+          {{ contact_attempts_count }} / 3
         </span>
       </div>
       {% if contact_attempts %}

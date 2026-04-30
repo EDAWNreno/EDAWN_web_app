@@ -12,6 +12,13 @@ from .forms import (RegisterForm, ContactAttemptForm, VisitNoteForm, CompanyCont
 from .ratelimit import ratelimit
 
 
+def _get_assignment(pk, user):
+    """Return assignment by pk; staff see any, volunteers only their own."""
+    if user.is_staff:
+        return get_object_or_404(Assignment, pk=pk)
+    return get_object_or_404(Assignment, pk=pk, volunteer=user)
+
+
 # ---------------------------------------------------------------------------
 # Landing page (public)
 # ---------------------------------------------------------------------------
@@ -196,9 +203,13 @@ def company_list(request):
     volunteer_filter = request.GET.get('volunteer', '') if request.user.is_staff else ''
 
     if request.user.is_staff:
-        base_qs = Assignment.objects.all().select_related('company', 'volunteer')
+        base_qs = (Assignment.objects.all()
+                   .select_related('company', 'volunteer')
+                   .prefetch_related('contact_attempts'))
     else:
-        base_qs = Assignment.objects.filter(volunteer=request.user).select_related('company')
+        base_qs = (Assignment.objects.filter(volunteer=request.user)
+                   .select_related('company')
+                   .prefetch_related('contact_attempts'))
 
     # Filter out unassigned-only view before applying status filter
     if status_filter == 'unassigned':
@@ -215,7 +226,7 @@ def company_list(request):
     if industry_filter:
         assignments = assignments.filter(company__industry=industry_filter)
 
-    if volunteer_filter and request.user.is_staff:
+    if volunteer_filter:
         assignments = assignments.filter(volunteer__id=volunteer_filter)
 
     # Unassigned companies — staff only, shown for 'all' and 'unassigned' filters
@@ -257,13 +268,8 @@ def company_list(request):
 
 @login_required
 def company_detail(request, pk):
-    # Staff can view any assignment; volunteers only their own
-    if request.user.is_staff:
-        assignment = get_object_or_404(Assignment, pk=pk)
-    else:
-        assignment = get_object_or_404(Assignment, pk=pk, volunteer=request.user)
-
-    contact_attempts = assignment.contact_attempts.all()
+    assignment       = _get_assignment(pk, request.user)
+    contact_attempts = list(assignment.contact_attempts.all())
     visit_notes      = assignment.visit_notes.all()
 
     context = {
@@ -272,7 +278,8 @@ def company_detail(request, pk):
         'contact_attempts':   contact_attempts,
         'visit_notes':        visit_notes,
         'contact_form':       ContactAttemptForm(),
-        'attempts_remaining': max(0, 3 - contact_attempts.count()),
+        'attempts_remaining': max(0, 3 - len(contact_attempts)),
+        'contact_attempts_count': len(contact_attempts),
         'is_owner':           request.user == assignment.volunteer,
     }
     return render(request, 'core/company_detail.html', context)
@@ -341,11 +348,7 @@ def log_visit(request, pk):
 
 @login_required
 def edit_visit_note(request, pk, note_pk):
-    # Staff can edit any note; volunteers only their own
-    if request.user.is_staff:
-        assignment = get_object_or_404(Assignment, pk=pk)
-    else:
-        assignment = get_object_or_404(Assignment, pk=pk, volunteer=request.user)
+    assignment = _get_assignment(pk, request.user)
 
     note = get_object_or_404(VisitNote, pk=note_pk, assignment=assignment)
 
