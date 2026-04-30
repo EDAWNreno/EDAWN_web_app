@@ -130,6 +130,16 @@ class VisitNote(models.Model):
     follow_up_needed = models.BooleanField(default=False)
     follow_up_notes  = models.TextField(blank=True)
 
+    # Expansion opportunity flags (F-32)
+    expansion_adding_sq_footage = models.BooleanField(default=False, verbose_name='Adding square footage')
+    expansion_new_building      = models.BooleanField(default=False, verbose_name='Looking for / moving to new building')
+    expansion_adding_equipment  = models.BooleanField(default=False, verbose_name='Adding equipment')
+    expansion_capex_planned     = models.BooleanField(default=False, verbose_name='Capital expenditure planned')
+    expansion_notes             = models.TextField(blank=True, verbose_name='Expansion details')
+
+    # Volunteer business lead tracking (F-35)
+    received_business_lead = models.BooleanField(default=False, verbose_name='Received a business lead or referral')
+
     class Meta:
         ordering = ['-visit_date']
 

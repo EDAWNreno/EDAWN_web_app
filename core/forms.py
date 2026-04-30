@@ -68,12 +68,31 @@ class ContactAttemptForm(forms.ModelForm):
 class VisitNoteForm(forms.ModelForm):
     class Meta:
         model  = VisitNote
-        fields = ('notes', 'follow_up_needed', 'follow_up_notes')
+        fields = (
+            'notes',
+            'expansion_adding_sq_footage',
+            'expansion_new_building',
+            'expansion_adding_equipment',
+            'expansion_capex_planned',
+            'expansion_notes',
+            'received_business_lead',
+            'follow_up_needed',
+            'follow_up_notes',
+        )
         widgets = {
             'notes': forms.Textarea(attrs={
                 'class': 'form-control', 'rows': 5,
                 'placeholder': 'What did you find out during the visit?',
             }),
+            'expansion_adding_sq_footage': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'expansion_new_building':      forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'expansion_adding_equipment':  forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'expansion_capex_planned':     forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'expansion_notes': forms.Textarea(attrs={
+                'class': 'form-control', 'rows': 2,
+                'placeholder': 'Additional expansion details (optional)',
+            }),
+            'received_business_lead': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'follow_up_needed': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'follow_up_notes':  forms.Textarea(attrs={
                 'class': 'form-control', 'rows': 3,
@@ -81,9 +100,15 @@ class VisitNoteForm(forms.ModelForm):
             }),
         }
         labels = {
-            'notes':            'Visit Notes',
-            'follow_up_needed': 'Follow-up needed?',
-            'follow_up_notes':  'Follow-up Details',
+            'notes':                       'Visit Notes',
+            'expansion_adding_sq_footage': 'Adding square footage',
+            'expansion_new_building':      'Looking for / moving to a new building',
+            'expansion_adding_equipment':  'Adding equipment',
+            'expansion_capex_planned':     'Capital expenditure planned',
+            'expansion_notes':             'Expansion details',
+            'received_business_lead':      'I received a business lead or referral opportunity from this visit',
+            'follow_up_needed':            'Follow-up needed?',
+            'follow_up_notes':             'Follow-up Details',
         }
 
 

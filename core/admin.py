@@ -125,7 +125,13 @@ class ContactAttemptInline(admin.TabularInline):
 class VisitNoteInline(admin.TabularInline):
     model           = VisitNote
     extra           = 0
-    readonly_fields = ('visited_by', 'visit_date', 'notes', 'follow_up_needed', 'follow_up_notes')
+    readonly_fields = (
+        'visited_by', 'visit_date', 'notes',
+        'expansion_adding_sq_footage', 'expansion_new_building',
+        'expansion_adding_equipment', 'expansion_capex_planned', 'expansion_notes',
+        'received_business_lead',
+        'follow_up_needed', 'follow_up_notes',
+    )
     can_delete      = False
 
 

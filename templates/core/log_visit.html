@@ -15,59 +15,156 @@
 </div>
 
 <div class="row justify-content-center">
-  <div class="col-lg-7">
-    <div class="card">
-      <div class="card-header py-3">
-        <i class="bi bi-journal-plus me-2"></i>Visit Notes
-      </div>
-      <div class="card-body">
-        <form method="post">
-          {% csrf_token %}
+  <div class="col-lg-8">
+    <form method="post">
+      {% csrf_token %}
 
-          <div class="mb-4">
+      <!-- Visit Notes -->
+      <div class="card mb-4">
+        <div class="card-header py-3">
+          <i class="bi bi-journal-plus me-2"></i>Visit Notes
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
             <label class="form-label fw-semibold">
               What did you find out during the visit?
               <span class="text-danger">*</span>
             </label>
             {{ form.notes }}
+            {% if form.notes.errors %}
+            <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Expansion Opportunities -->
+      <div class="card mb-4">
+        <div class="card-header py-3">
+          <i class="bi bi-graph-up-arrow me-2"></i>Expansion Opportunities
+          <span class="text-muted fw-normal small ms-2">Check all that apply</span>
+        </div>
+        <div class="card-body">
+          <div class="mb-2">
+            <div class="form-check">
+              {{ form.expansion_adding_sq_footage }}
+              <label class="form-check-label" for="{{ form.expansion_adding_sq_footage.id_for_label }}">
+                {{ form.expansion_adding_sq_footage.label }}
+              </label>
+            </div>
+          </div>
+          <div class="mb-2">
+            <div class="form-check">
+              {{ form.expansion_new_building }}
+              <label class="form-check-label" for="{{ form.expansion_new_building.id_for_label }}">
+                {{ form.expansion_new_building.label }}
+              </label>
+            </div>
+          </div>
+          <div class="mb-2">
+            <div class="form-check">
+              {{ form.expansion_adding_equipment }}
+              <label class="form-check-label" for="{{ form.expansion_adding_equipment.id_for_label }}">
+                {{ form.expansion_adding_equipment.label }}
+              </label>
+            </div>
+          </div>
+          <div class="mb-3">
+            <div class="form-check">
+              {{ form.expansion_capex_planned }}
+              <label class="form-check-label" for="{{ form.expansion_capex_planned.id_for_label }}">
+                {{ form.expansion_capex_planned.label }}
+              </label>
+            </div>
           </div>
 
+          <div id="expansionNotesSection" style="display:none;">
+            <label class="form-label fw-semibold small">{{ form.expansion_notes.label }}</label>
+            {{ form.expansion_notes }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Business Lead -->
+      <div class="card mb-4">
+        <div class="card-header py-3">
+          <i class="bi bi-briefcase me-2"></i>Business Opportunity
+        </div>
+        <div class="card-body">
+          <div class="form-check">
+            {{ form.received_business_lead }}
+            <label class="form-check-label fw-semibold" for="{{ form.received_business_lead.id_for_label }}">
+              {{ form.received_business_lead.label }}
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Follow-up -->
+      <div class="card mb-4">
+        <div class="card-header py-3">
+          <i class="bi bi-flag me-2"></i>Follow-up
+        </div>
+        <div class="card-body">
           <div class="mb-3">
             <div class="form-check">
               {{ form.follow_up_needed }}
-              <label class="form-check-label fw-semibold"
-                     for="{{ form.follow_up_needed.id_for_label }}">
+              <label class="form-check-label fw-semibold" for="{{ form.follow_up_needed.id_for_label }}">
                 Follow-up needed?
               </label>
             </div>
           </div>
 
-          <div class="mb-4" id="followUpSection" style="display:none;">
+          <div id="followUpSection" style="display:none;">
             <label class="form-label fw-semibold">Follow-up Details</label>
             {{ form.follow_up_notes }}
           </div>
-
-          <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary">
-              <i class="bi bi-check-circle me-1"></i> Save Visit
-            </button>
-            <a href="{% url 'company_detail' assignment.pk %}" class="btn btn-outline-secondary">
-              Cancel
-            </a>
-          </div>
-        </form>
+        </div>
       </div>
-    </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-circle me-1"></i> Save Visit
+        </button>
+        <a href="{% url 'company_detail' assignment.pk %}" class="btn btn-outline-secondary">
+          Cancel
+        </a>
+      </div>
+
+    </form>
   </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+  // Follow-up toggle
   const followUpCheck   = document.getElementById('{{ form.follow_up_needed.id_for_label }}');
   const followUpSection = document.getElementById('followUpSection');
   followUpCheck.addEventListener('change', function () {
     followUpSection.style.display = this.checked ? 'block' : 'none';
   });
+
+  // Expansion notes: show when any expansion checkbox is checked
+  const expansionChecks   = [
+    document.getElementById('{{ form.expansion_adding_sq_footage.id_for_label }}'),
+    document.getElementById('{{ form.expansion_new_building.id_for_label }}'),
+    document.getElementById('{{ form.expansion_adding_equipment.id_for_label }}'),
+    document.getElementById('{{ form.expansion_capex_planned.id_for_label }}'),
+  ];
+  const expansionSection  = document.getElementById('expansionNotesSection');
+
+  function updateExpansionNotes() {
+    const anyChecked = expansionChecks.some(cb => cb && cb.checked);
+    expansionSection.style.display = anyChecked ? 'block' : 'none';
+  }
+
+  expansionChecks.forEach(cb => {
+    if (cb) cb.addEventListener('change', updateExpansionNotes);
+  });
+
+  // Run on load in case of form re-render with values
+  updateExpansionNotes();
+  if (followUpCheck.checked) followUpSection.style.display = 'block';
 </script>
 {% endblock %}
