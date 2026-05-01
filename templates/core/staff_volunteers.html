@@ -143,7 +143,9 @@
           <td>
             {% if vol.active_count %}
               {% if not vol.last_visit or vol.last_visit < cutoff_45 %}
-                <span class="badge bg-danger rounded-pill">Overdue</span>
+                <span class="badge bg-danger rounded-pill"
+                      data-bs-toggle="tooltip"
+                      data-bs-title="Has an active assignment but no visit logged in the past 45 days">Overdue</span>
               {% else %}
                 <span class="badge rounded-pill" style="background:var(--edawn-teal);">Active</span>
               {% endif %}
