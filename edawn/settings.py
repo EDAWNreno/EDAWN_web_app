@@ -40,6 +40,11 @@ if not SECRET_KEY:
 
 DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 'yes')
 
+TRAINING_CALENDAR_URL = os.environ.get(
+    'TRAINING_CALENDAR_URL',
+    'https://calendly.com/yaeger-edawn/bbv-meeting',
+)
+
 ALLOWED_HOSTS = [
     h.strip()
     for h in os.environ.get('ALLOWED_HOSTS', '').split(',')

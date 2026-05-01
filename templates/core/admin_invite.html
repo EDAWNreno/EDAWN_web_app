@@ -48,6 +48,32 @@
   </div>
 
   <div class="col-lg-5">
+    {% if training_calendar_url %}
+    <div class="card mb-4">
+      <div class="card-header py-3">
+        <span><i class="bi bi-calendar-check me-2"></i>Training Booking Link</span>
+      </div>
+      <div class="card-body">
+        <p class="small text-muted mb-3">
+          Share this link with new volunteers so they can book their onboarding training session.
+        </p>
+        <div class="input-group">
+          <input type="text" class="form-control form-control-sm font-monospace"
+                 value="{{ training_calendar_url }}" id="cal-url" readonly onclick="this.select()">
+          <button class="btn btn-sm btn-outline-secondary" onclick="copyCalLink()" id="cal-copy-btn">
+            <i class="bi bi-clipboard"></i>
+          </button>
+        </div>
+        <div class="mt-2">
+          <a href="{{ training_calendar_url }}" target="_blank" rel="noopener"
+             class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-box-arrow-up-right me-1"></i>Open Calendly
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     <div class="card">
       <div class="card-header py-3">
         <span><i class="bi bi-link me-2"></i>Unused Invite Links</span>
@@ -78,6 +104,15 @@
 
 {% block extra_js %}
 <script>
+function copyCalLink() {
+  const input = document.getElementById('cal-url');
+  input.select();
+  navigator.clipboard.writeText(input.value).then(() => {
+    const btn = document.getElementById('cal-copy-btn');
+    btn.innerHTML = '<i class="bi bi-check-lg"></i>';
+    setTimeout(() => btn.innerHTML = '<i class="bi bi-clipboard"></i>', 2000);
+  });
+}
 function copyLink() {
   const input = document.getElementById('invite-url');
   input.select();

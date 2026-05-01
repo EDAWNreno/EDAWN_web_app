@@ -2,6 +2,7 @@ import csv
 import io
 from datetime import timedelta
 
+from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout
@@ -123,9 +124,12 @@ def dashboard(request):
         'open_count':      active_assignments.count(),
     }
 
-    # Admin tools — only for staff users
     if user.is_staff:
         context['unassigned_count'] = Company.objects.filter(status=Company.STATUS_UNASSIGNED).count()
+
+    profile = getattr(user, 'profile', None)
+    if profile and not profile.training_completed and settings.TRAINING_CALENDAR_URL:
+        context['training_calendar_url'] = settings.TRAINING_CALENDAR_URL
 
     return render(request, 'core/dashboard.html', context)
 
@@ -215,8 +219,9 @@ def quick_invite(request):
         invite_link = request.build_absolute_uri(f'/register/?invite={invite.code}')
     available = InviteCode.objects.filter(used_by__isnull=True).select_related('created_by')[:10]
     return render(request, 'core/admin_invite.html', {
-        'invite_link': invite_link,
-        'available': available,
+        'invite_link':          invite_link,
+        'available':            available,
+        'training_calendar_url': settings.TRAINING_CALENDAR_URL,
     })
 
 
