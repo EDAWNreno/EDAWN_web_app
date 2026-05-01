@@ -135,8 +135,10 @@
     .rank-3 { color: #cd7f32; }
 
     @media (max-width: 768px) {
-      .sidebar { width: 100%; min-height: auto; position: relative; }
-      .sidebar .brand { padding: .75rem 1rem; }
+      .sidebar { width: 100%; min-height: auto; position: relative; height: auto !important; overflow: visible !important; }
+      .sidebar .brand { padding: .5rem 1rem; }
+      .sidebar .brand img { max-height: 36px; width: auto; max-width: none; }
+      .sidebar .brand .portal-subtitle { display: none; }
       .main-content { margin-left: 0; padding: 1.25rem; }
     }
   </style>
@@ -148,8 +150,8 @@
 <div class="sidebar">
   <div class="brand d-flex align-items-center justify-content-between">
     <a href="{% url 'landing' %}" style="text-decoration:none;">
-      <img src="{% static 'img/edawn-logo-white.png' %}" alt="EDAWN" style="max-width:160px; height:auto;">
-      <span style="display:block; font-size:.75rem; margin-top:.25rem; color:var(--edawn-teal);">Business Builders Portal</span>
+      <img src="{% static 'img/edawn-logo-white.png' %}" alt="EDAWN" style="max-width:160px; max-height:52px; width:auto; height:auto;">
+      <span class="portal-subtitle" style="display:block; font-size:.75rem; margin-top:.25rem; color:var(--edawn-teal);">Business Builders Portal</span>
     </a>
     <button class="d-md-none btn p-1" type="button"
             data-bs-toggle="collapse" data-bs-target="#sidebarNav"
