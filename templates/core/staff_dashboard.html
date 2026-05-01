@@ -115,6 +115,7 @@
           <thead class="table-light">
             <tr>
               <th>Company</th>
+              <th>Industry</th>
               <th>Volunteer</th>
               <th>Status</th>
               <th class="text-muted" style="font-weight:400;">Assigned</th>
@@ -128,6 +129,7 @@
                   {{ a.company.name }}
                 </a>
               </td>
+              <td class="text-muted small">{{ a.company.industry|default:"—" }}</td>
               <td class="text-muted">{{ a.volunteer.get_full_name|default:a.volunteer.username }}</td>
               <td>
                 {% if a.status == 'active' %}
@@ -141,7 +143,7 @@
               <td class="text-muted">{{ a.assigned_date|timesince }} ago</td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" class="text-center text-muted py-4">No assignments yet.</td></tr>
+            <tr><td colspan="5" class="text-center text-muted py-4">No assignments yet.</td></tr>
             {% endfor %}
           </tbody>
         </table>

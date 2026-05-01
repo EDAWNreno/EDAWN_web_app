@@ -68,6 +68,7 @@
           <li class="list-group-item py-2 px-3">
             <div class="fw-semibold small">{{ a.company.name }}</div>
             <small class="text-muted">
+              {% if a.company.industry %}<span class="badge bg-light text-secondary border me-1">{{ a.company.industry }}</span>{% endif %}
               <i class="bi bi-person"></i> {{ a.volunteer.get_full_name|default:a.volunteer.username }}
               &middot; {{ a.assigned_date|timesince }} ago
             </small>

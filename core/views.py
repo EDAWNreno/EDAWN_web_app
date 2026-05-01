@@ -181,7 +181,11 @@ def quick_assign(request):
             messages.success(request, f'"{company.name}" assigned to {vol_name}.')
             return redirect('staff_assign')
     else:
-        form = QuickAssignForm()
+        initial = {}
+        company_pk = request.GET.get('company')
+        if company_pk and company_pk.isdigit():
+            initial['company'] = company_pk
+        form = QuickAssignForm(initial=initial)
     recent = Assignment.objects.select_related('company', 'volunteer').order_by('-assigned_date')[:5]
     return render(request, 'core/admin_assign.html', {'form': form, 'recent': recent})
 

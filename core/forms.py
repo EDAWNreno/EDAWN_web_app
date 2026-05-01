@@ -252,9 +252,14 @@ class QuickCompanyForm(forms.ModelForm):
         }
 
 
+class _CompanyWithIndustryField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return f"{obj.name} — {obj.industry}" if obj.industry else obj.name
+
+
 class QuickAssignForm(forms.Form):
-    company = forms.ModelChoiceField(
-        queryset=Company.objects.filter(status=Company.STATUS_UNASSIGNED),
+    company = _CompanyWithIndustryField(
+        queryset=Company.objects.filter(status=Company.STATUS_UNASSIGNED).order_by('industry', 'name'),
         widget=forms.Select(attrs={'class': 'form-select'}),
         empty_label='Select a company...',
     )
