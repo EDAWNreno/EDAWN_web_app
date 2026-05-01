@@ -59,6 +59,7 @@
           <th>Last Visit</th>
           <th>Capacity</th>
           <th>Training</th>
+          <th>BBV</th>
           <th>Status</th>
         </tr>
       </thead>
@@ -118,6 +119,23 @@
               {% else %}
               <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2">
                 Mark Done
+              </button>
+              {% endif %}
+            </form>
+          </td>
+          <td>
+            <form method="post" action="{% url 'staff_mark_bbv' vol.pk %}" style="display:inline;">
+              {% csrf_token %}
+              {% if vol.profile.bbv_certified %}
+              <button type="submit" class="btn btn-sm py-0 px-2"
+                      style="background:var(--edawn-blue); color:#fff;"
+                      title="Certified {{ vol.profile.bbv_certified_date|date:'M d, Y' }} — click to revoke">
+                <i class="bi bi-patch-check-fill me-1"></i>Certified
+              </button>
+              {% else %}
+              <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2"
+                      title="Manually grant BBV certification">
+                Grant BBV
               </button>
               {% endif %}
             </form>

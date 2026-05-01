@@ -773,3 +773,27 @@ def staff_mark_training(request, pk):
         messages.success(request, f"Training marked complete for {name}.")
     profile.save(update_fields=['training_completed', 'training_completed_date'])
     return redirect('staff_volunteers')
+
+
+@staff_member_required
+def staff_mark_bbv(request, pk):
+    if request.method != 'POST':
+        return redirect('staff_volunteers')
+    volunteer = get_object_or_404(User, pk=pk, is_staff=False)
+    profile, _ = UserProfile.objects.get_or_create(user=volunteer)
+    name = volunteer.get_full_name() or volunteer.username
+    if profile.bbv_certified:
+        profile.bbv_certified      = False
+        profile.bbv_certified_date = None
+        messages.success(request, f"BBV certification removed for {name}.")
+    else:
+        profile.bbv_certified      = True
+        profile.bbv_certified_date = timezone.now()
+        # Also award the badge if not already earned
+        from .models import Badge, UserBadge
+        bbv_badge = Badge.objects.filter(name='Certified Business Builder Volunteer').first()
+        if bbv_badge:
+            UserBadge.objects.get_or_create(user=volunteer, badge=bbv_badge)
+        messages.success(request, f"BBV certification granted to {name}.")
+    profile.save(update_fields=['bbv_certified', 'bbv_certified_date'])
+    return redirect('staff_volunteers')
