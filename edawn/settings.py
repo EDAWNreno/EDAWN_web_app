@@ -168,6 +168,19 @@ LOGOUT_REDIRECT_URL = 'login'
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8000')
+
+# ---------------------------------------------------------------------------
+# Email — Resend SMTP relay
+# ---------------------------------------------------------------------------
+EMAIL_BACKEND      = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST         = 'smtp.resend.com'
+EMAIL_PORT         = 587
+EMAIL_USE_TLS      = True
+EMAIL_HOST_USER    = 'resend'
+EMAIL_HOST_PASSWORD = os.environ.get('RESEND_API_KEY', '')
+DEFAULT_FROM_EMAIL  = os.environ.get('DEFAULT_FROM_EMAIL', 'EDAWN Business Builders <noreply@edawn.org>')
+
 
 # ---------------------------------------------------------------------------
 # Production security — enforced when DEBUG is False

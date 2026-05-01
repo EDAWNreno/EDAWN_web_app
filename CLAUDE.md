@@ -27,6 +27,9 @@ python manage.py seed_data
 # Create a local superuser
 python manage.py createsuperuser
 
+# Send inactivity reminder emails (run daily via Render cron job)
+python manage.py send_inactivity_reminders
+
 # Production build (Render runs this via build.sh)
 ./build.sh
 ```
@@ -45,6 +48,10 @@ There are no tests — `core/tests.py` is empty.
 | `ALLOWED_HOSTS` | `localhost,127.0.0.1` | |
 | `CSRF_TRUSTED_ORIGINS` | — | Needed for HTTPS deployments |
 | `DJANGO_SUPERUSER_PASSWORD` | — | Triggers superuser creation in `build.sh` |
+| `RESEND_API_KEY` | — | Resend API key — emails are silently skipped if unset |
+| `DEFAULT_FROM_EMAIL` | `EDAWN Business Builders <noreply@edawn.org>` | From address for all outgoing email |
+| `SITE_URL` | `http://localhost:8000` | Used in email links — set to the public Render URL in production |
+| `TRAINING_CALENDAR_URL` | Calendly link | Booking link shown on volunteer dashboard until training is marked complete |
 
 ## Architecture
 

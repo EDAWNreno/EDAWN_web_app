@@ -203,6 +203,10 @@ class VisitNote(models.Model):
         from .badges import check_and_award_badges, check_bbv_eligibility
         check_and_award_badges(self.visited_by)
         check_bbv_eligibility(self.visited_by)
+        from django.utils import timezone as _tz
+        UserProfile.objects.filter(user=self.visited_by).update(last_inactivity_notified=None)
+        from .emails import notify_staff_visit_submitted
+        notify_staff_visit_submitted(self)
 
 
 class Badge(models.Model):
@@ -329,8 +333,9 @@ class UserProfile(models.Model):
     user                   = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     training_completed     = models.BooleanField(default=False)
     training_completed_date = models.DateField(null=True, blank=True)
-    bbv_certified          = models.BooleanField(default=False)
-    bbv_certified_date     = models.DateTimeField(null=True, blank=True)
+    bbv_certified               = models.BooleanField(default=False)
+    bbv_certified_date          = models.DateTimeField(null=True, blank=True)
+    last_inactivity_notified    = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"Profile: {self.user.username}"
