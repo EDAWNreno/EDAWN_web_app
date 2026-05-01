@@ -200,7 +200,6 @@ class VisitNote(models.Model):
             self.assignment.save(update_fields=['status', 'completed_date'])
             self.assignment.company.status = Company.STATUS_VISITED
             self.assignment.company.save(update_fields=['status'])
-        # Check for badge and BBV awards
         from .badges import check_and_award_badges, check_bbv_eligibility
         check_and_award_badges(self.visited_by)
         check_bbv_eligibility(self.visited_by)
@@ -313,4 +312,4 @@ class UserProfile(models.Model):
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
-        UserProfile.objects.get_or_create(user=instance)
+        UserProfile.objects.create(user=instance)

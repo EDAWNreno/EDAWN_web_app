@@ -155,7 +155,6 @@ def quick_assign(request):
             company   = form.cleaned_data['company']
             volunteer = form.cleaned_data['volunteer']
 
-            # Non-BBV volunteers are limited to 1 active assignment
             profile, _ = UserProfile.objects.get_or_create(user=volunteer)
             if not profile.bbv_certified:
                 active_count = Assignment.objects.filter(
@@ -521,6 +520,23 @@ def message_create(request):
 # Staff Portal
 # ---------------------------------------------------------------------------
 
+def _bbv_overdue_count(cutoff_90):
+    return (
+        User.objects
+        .filter(is_active=True, is_staff=False, profile__bbv_certified=False)
+        .annotate(
+            first_assignment=Min('assignments__assigned_date'),
+            completed_count=Count(
+                'assignments',
+                filter=Q(assignments__status=Assignment.STATUS_COMPLETED),
+                distinct=True,
+            ),
+        )
+        .filter(first_assignment__lt=cutoff_90, completed_count__gt=0)
+        .count()
+    )
+
+
 _CSV_FIELD_MAP = {
     'name': 'name', 'address': 'address', 'city': 'city', 'state': 'state',
     'zip': 'zip_code', 'zip_code': 'zip_code', 'phone': 'phone',
@@ -547,28 +563,13 @@ def staff_dashboard(request):
         .count()
     )
 
-    overdue_qs = (
+    overdue_volunteers = list(
         User.objects
         .filter(is_active=True, is_staff=False, assignments__status=Assignment.STATUS_ACTIVE)
         .annotate(last_visit=Max('assignments__visit_notes__visit_date'))
         .filter(Q(last_visit__lt=cutoff_45) | Q(last_visit__isnull=True))
         .distinct()
-        .order_by('first_name', 'last_name')
-    )
-
-    bbv_overdue_count = (
-        User.objects
-        .filter(is_active=True, is_staff=False, profile__bbv_certified=False)
-        .annotate(
-            first_assignment=Min('assignments__assigned_date'),
-            completed_count=Count(
-                'assignments',
-                filter=Q(assignments__status=Assignment.STATUS_COMPLETED),
-                distinct=True,
-            ),
-        )
-        .filter(first_assignment__lt=cutoff_90, completed_count__gt=0)
-        .count()
+        .order_by('first_name', 'last_name')[:8]
     )
 
     context = {
@@ -578,9 +579,9 @@ def staff_dashboard(request):
         'visited_count':      Company.objects.filter(status=Company.STATUS_VISITED).count(),
         'total_volunteers':   User.objects.filter(is_active=True, is_staff=False).count(),
         'not_visited_60d':    not_visited_60d,
-        'overdue_count':      overdue_qs.count(),
-        'overdue_volunteers': overdue_qs[:8],
-        'bbv_overdue_count':  bbv_overdue_count,
+        'overdue_count':      len(overdue_volunteers),
+        'overdue_volunteers': overdue_volunteers,
+        'bbv_overdue_count':  _bbv_overdue_count(cutoff_90),
         'recent_assignments': (
             Assignment.objects
             .select_related('company', 'volunteer')
@@ -637,28 +638,13 @@ def staff_volunteers(request):
             completed_count__gt=0,
         )
 
-    bbv_overdue_count = (
-        User.objects
-        .filter(is_active=True, is_staff=False, profile__bbv_certified=False)
-        .annotate(
-            first_assignment=Min('assignments__assigned_date'),
-            completed_count=Count(
-                'assignments',
-                filter=Q(assignments__status=Assignment.STATUS_COMPLETED),
-                distinct=True,
-            ),
-        )
-        .filter(first_assignment__lt=cutoff_90, completed_count__gt=0)
-        .count()
-    )
-
     context = {
-        'volunteers':       volunteers,
-        'status_filter':    status_filter,
-        'cutoff_45':        cutoff_45,
-        'cutoff_90':        cutoff_90,
-        'total_count':      User.objects.filter(is_active=True, is_staff=False).count(),
-        'bbv_overdue_count': bbv_overdue_count,
+        'volunteers':        volunteers,
+        'status_filter':     status_filter,
+        'cutoff_45':         cutoff_45,
+        'cutoff_90':         cutoff_90,
+        'total_count':       User.objects.filter(is_active=True, is_staff=False).count(),
+        'bbv_overdue_count': _bbv_overdue_count(cutoff_90),
     }
     return render(request, 'core/staff_volunteers.html', context)
 

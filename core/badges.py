@@ -51,6 +51,7 @@ def check_and_award_badges(user):
 def check_bbv_eligibility(user):
     """Award Certified BBV designation if volunteer visited in each of the last 3 calendar months."""
     from .models import Badge, Message, UserBadge, UserProfile, VisitNote
+    from django.db.models import Q
     from django.utils import timezone
 
     profile, _ = UserProfile.objects.get_or_create(user=user)
@@ -58,18 +59,24 @@ def check_bbv_eligibility(user):
         return
 
     now = timezone.now()
-    for months_back in range(1, 4):
-        month = now.month - months_back
-        year  = now.year
-        while month <= 0:
-            month += 12
-            year  -= 1
-        if not VisitNote.objects.filter(
-            visited_by=user,
-            visit_date__year=year,
-            visit_date__month=month,
-        ).exists():
-            return
+    required = []
+    for i in range(1, 4):
+        m, y = now.month - i, now.year
+        if m <= 0:
+            m += 12
+            y -= 1
+        required.append((y, m))
+
+    month_q = Q()
+    for y, m in required:
+        month_q |= Q(visit_date__year=y, visit_date__month=m)
+
+    covered = set(
+        VisitNote.objects.filter(visited_by=user).filter(month_q)
+        .values_list('visit_date__year', 'visit_date__month').distinct()
+    )
+    if not all((y, m) in covered for y, m in required):
+        return
 
     profile.bbv_certified      = True
     profile.bbv_certified_date = now
