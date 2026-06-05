@@ -52,13 +52,18 @@ class Command(BaseCommand):
             else:
                 continue
 
-            # F-15: remind the volunteer at 30+ days
-            notify_volunteer_inactivity(vol, active, days_inactive)
-            reminded += 1
+            # F-15: remind the volunteer at 30+ days, at most once every 7 days
+            profile = getattr(vol, 'profile', None)
+            cutoff_remind = now - timedelta(days=7)
+            if not profile or not profile.last_inactivity_reminded or profile.last_inactivity_reminded < cutoff_remind:
+                notify_volunteer_inactivity(vol, active, days_inactive)
+                reminded += 1
+                if profile:
+                    profile.last_inactivity_reminded = now
+                    profile.save(update_fields=['last_inactivity_reminded'])
 
             # F-16: alert staff at 45+ days, only once per inactive period
             if days_inactive >= 45:
-                profile = getattr(vol, 'profile', None)
                 if profile and not profile.last_inactivity_notified:
                     notify_staff_volunteer_overdue(vol, days_inactive)
                     profile.last_inactivity_notified = now
