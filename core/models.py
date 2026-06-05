@@ -205,7 +205,7 @@ class VisitNote(models.Model):
         check_and_award_badges(self.visited_by)
         check_bbv_eligibility(self.visited_by)
         # Clear the inactivity flag so the volunteer can be re-alerted if they go inactive again
-        UserProfile.objects.filter(user=self.visited_by).update(last_inactivity_notified=None)
+        UserProfile.objects.filter(user=self.visited_by).update(last_inactivity_notified=None, last_inactivity_reminded=None)
         # Staff notification and Salesforce sync only on initial creation, not edits
         if is_new:
             from .emails import notify_staff_visit_submitted
@@ -382,6 +382,7 @@ class UserProfile(models.Model):
     bbv_certified               = models.BooleanField(default=False)
     bbv_certified_date          = models.DateTimeField(null=True, blank=True)
     last_inactivity_notified    = models.DateTimeField(null=True, blank=True)
+    last_inactivity_reminded    = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"Profile: {self.user.username}"
