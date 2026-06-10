@@ -363,6 +363,17 @@ class VisitExportForm(forms.Form):
 
 
 class AccountForm(forms.ModelForm):
+    phone_number = forms.CharField(
+        max_length=20, required=False,
+        label='Mobile Phone (for SMS reminders)',
+        widget=forms.TextInput(attrs={**_fc, 'placeholder': 'e.g. +17755551234'}),
+    )
+    sms_reminders_enabled = forms.BooleanField(
+        required=False,
+        label='Send me text message reminders when I have inactive assignments',
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+    )
+
     class Meta:
         model  = User
         fields = ['first_name', 'last_name', 'email']
@@ -372,12 +383,27 @@ class AccountForm(forms.ModelForm):
             'email':      forms.EmailInput(attrs=_fc),
         }
 
+    def __init__(self, *args, **kwargs):
+        profile = kwargs.pop('profile', None)
+        super().__init__(*args, **kwargs)
+        if profile:
+            self.fields['phone_number'].initial = profile.phone_number
+            self.fields['sms_reminders_enabled'].initial = profile.sms_reminders_enabled
+
     def clean_email(self):
         email = self.cleaned_data['email']
         qs = User.objects.exclude(pk=self.instance.pk).filter(email=email)
         if qs.exists():
             raise forms.ValidationError("That email address is already in use.")
         return email
+
+    def clean(self):
+        cleaned = super().clean()
+        sms_on = cleaned.get('sms_reminders_enabled')
+        phone  = cleaned.get('phone_number', '').strip()
+        if sms_on and not phone:
+            self.add_error('phone_number', 'Enter a mobile number to enable SMS reminders.')
+        return cleaned
 
 
 class ResourceForm(forms.ModelForm):

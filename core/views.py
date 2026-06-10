@@ -494,14 +494,18 @@ def edit_visit_note(request, pk, note_pk):
 
 @login_required
 def account(request):
+    profile = request.user.profile
     if request.method == 'POST':
-        form = AccountForm(request.POST, instance=request.user)
+        form = AccountForm(request.POST, instance=request.user, profile=profile)
         if form.is_valid():
             form.save()
+            profile.phone_number         = form.cleaned_data['phone_number'].strip()
+            profile.sms_reminders_enabled = form.cleaned_data['sms_reminders_enabled']
+            profile.save(update_fields=['phone_number', 'sms_reminders_enabled'])
             messages.success(request, 'Your account has been updated.')
             return redirect('account')
     else:
-        form = AccountForm(instance=request.user)
+        form = AccountForm(instance=request.user, profile=profile)
     return render(request, 'core/account.html', {'form': form})
 
 

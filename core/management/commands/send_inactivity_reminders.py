@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from core.emails import notify_staff_volunteer_overdue, notify_volunteer_inactivity
 from core.models import Assignment, UserProfile
+from core.sms import notify_volunteer_inactivity_sms
 
 
 class Command(BaseCommand):
@@ -57,6 +58,8 @@ class Command(BaseCommand):
             cutoff_remind = now - timedelta(days=7)
             if not profile or not profile.last_inactivity_reminded or profile.last_inactivity_reminded < cutoff_remind:
                 notify_volunteer_inactivity(vol, active, days_inactive)
+                if profile and profile.sms_reminders_enabled:
+                    notify_volunteer_inactivity_sms(vol, active, days_inactive)
                 reminded += 1
                 if profile:
                     profile.last_inactivity_reminded = now
