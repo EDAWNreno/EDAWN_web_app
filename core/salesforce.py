@@ -8,7 +8,7 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-_TOKEN_URL = 'https://login.salesforce.com/services/oauth2/token'
+_DEFAULT_LOGIN_URL = 'https://login.salesforce.com'
 _API_VERSION = 'v59.0'
 
 
@@ -22,15 +22,23 @@ def _get_access_token():
     if not client_id or not client_secret:
         return None, None
 
+    login_url = (getattr(settings, 'SF_LOGIN_URL', '') or _DEFAULT_LOGIN_URL).rstrip('/')
+    token_url = f"{login_url}/services/oauth2/token"
+    logger.warning("Salesforce token request to: %s", login_url)
+
     data = urllib.parse.urlencode({
         'grant_type': 'client_credentials',
         'client_id': client_id,
         'client_secret': client_secret,
     }).encode()
 
-    req = urllib.request.Request(_TOKEN_URL, data=data, method='POST')
-    with urllib.request.urlopen(req, timeout=10) as resp:
-        body = json.loads(resp.read())
+    req = urllib.request.Request(token_url, data=data, method='POST')
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            body = json.loads(resp.read())
+    except urllib.error.HTTPError as exc:
+        error_body = exc.read().decode('utf-8', errors='replace')
+        raise RuntimeError(f"Salesforce token request failed ({exc.code}): {error_body}") from exc
     return body['access_token'], body['instance_url']
 
 
@@ -57,9 +65,38 @@ def _lookup_account_id(instance_url, token, company_name):
     return records[0]['Id'] if records else None
 
 
+def _create_case_stripping_fls_blocks(url, token, case):
+    """POST a Case, automatically retrying without any FLS-blocked fields."""
+    import json as _json
+    blocked = []
+    for _ in range(10):
+        try:
+            _api_request('POST', url, token, case)
+            if blocked:
+                logger.warning("Case created without FLS-restricted fields: %s", blocked)
+            return
+        except RuntimeError as exc:
+            msg = str(exc)
+            if 'INVALID_FIELD_FOR_INSERT_UPDATE' not in msg:
+                raise
+            try:
+                start = msg.index('[{')
+                errors = _json.loads(msg[start:msg.rindex(']') + 1])
+                fields = [f for e in errors for f in e.get('fields', [])]
+            except Exception:
+                raise exc
+            if not fields:
+                raise
+            for f in fields:
+                case.pop(f, None)
+            blocked.extend(fields)
+    raise RuntimeError("Gave up creating Case after stripping blocked fields: %s" % blocked)
+
+
 def sync_visit_to_salesforce(visit_note):
     """Create a Salesforce Case for a completed volunteer visit. Fails silently if unconfigured."""
     if not getattr(settings, 'SF_CLIENT_ID', ''):
+        logger.warning("Salesforce sync skipped: SF_CLIENT_ID is not set")
         return
 
     try:
@@ -119,6 +156,7 @@ def sync_visit_to_salesforce(visit_note):
 
         if account_id:
             case['AccountId'] = account_id
+        case['SuppliedCompany'] = company.name[:80]
 
         if visit_note.employee_count is not None:
             case['Current_Number_of_Employees__c'] = visit_note.employee_count
@@ -141,8 +179,8 @@ def sync_visit_to_salesforce(visit_note):
         if expansion_flags:
             case['Current_Issues__c'] = '\n'.join(expansion_flags)
 
-        url = f"{instance_url}/services/data/{_API_VERSION}/sobjects/Case/"
-        _api_request('POST', url, token, case)
+        case_url = f"{instance_url}/services/data/{_API_VERSION}/sobjects/Case/"
+        _create_case_stripping_fls_blocks(case_url, token, case)
 
     except Exception:
         logger.exception("Failed to sync visit note %s to Salesforce", visit_note.pk)

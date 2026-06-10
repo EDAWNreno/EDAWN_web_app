@@ -191,6 +191,7 @@ TWILIO_FROM_NUMBER  = os.environ.get('TWILIO_FROM_NUMBER', '')
 # ---------------------------------------------------------------------------
 SF_CLIENT_ID     = os.environ.get('SF_CLIENT_ID', '')
 SF_CLIENT_SECRET = os.environ.get('SF_CLIENT_SECRET', '')
+SF_LOGIN_URL     = os.environ.get('SF_INSTANCE_URL', os.environ.get('SF_LOGIN_URL', ''))
 
 
 # ---------------------------------------------------------------------------
