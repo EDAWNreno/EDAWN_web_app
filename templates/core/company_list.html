@@ -83,6 +83,24 @@
   </div>
 </div>
 
+{% if request.user.is_staff %}
+<form method="post" action="{% url 'staff_delete_companies' %}" id="companyDeleteForm">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+  <div class="d-flex align-items-center gap-3 mb-3">
+    <div class="form-check mb-0">
+      <input type="checkbox" class="form-check-input" id="selectAllCompanies">
+      <label class="form-check-label small text-muted" for="selectAllCompanies">Select all</label>
+    </div>
+    <span class="small text-muted" id="selectedCount"></span>
+    <button type="submit" name="action" value="delete"
+            class="btn btn-sm btn-outline-danger ms-auto"
+            onclick="return confirmBulkDelete()">
+      <i class="bi bi-trash me-1"></i>Delete Selected
+    </button>
+  </div>
+{% endif %}
+
 <!-- Assigned companies table -->
 {% if assignments %}
 <div class="card {% if unassigned_companies %}mb-4{% endif %}">
@@ -90,6 +108,7 @@
     <table class="table table-hover mb-0 align-middle">
       <thead class="table-light">
         <tr>
+          {% if request.user.is_staff %}<th style="width:1%;"></th>{% endif %}
           <th>Company</th>
           <th>Location</th>
           <th>Industry</th>
@@ -102,6 +121,12 @@
       <tbody>
         {% for assignment in assignments %}
         <tr>
+          {% if request.user.is_staff %}
+          <td>
+            <input type="checkbox" class="form-check-input company-checkbox"
+                   name="company_ids" value="{{ assignment.company.pk }}">
+          </td>
+          {% endif %}
           <td>
             <div class="fw-semibold">{{ assignment.company.name }}</div>
             {% if assignment.company.primary_contact_name %}
@@ -147,10 +172,17 @@
               <span class="badge bg-danger rounded-pill">Lost</span>
             {% endif %}
           </td>
-          <td class="text-end">
+          <td class="text-end text-nowrap">
             <a href="{% url 'company_detail' assignment.pk %}" class="btn btn-sm btn-outline-secondary">
               <i class="bi bi-eye"></i> View
             </a>
+            {% if request.user.is_staff %}
+            <button type="submit" name="delete_one" value="{{ assignment.company.pk }}"
+                    class="btn btn-sm btn-outline-danger" title="Delete company"
+                    onclick="return confirm('Delete this company? This also removes its assignments, contact attempts and visit notes. This cannot be undone.')">
+              <i class="bi bi-trash"></i>
+            </button>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -179,6 +211,7 @@
     <table class="table table-hover mb-0 align-middle">
       <thead class="table-light">
         <tr>
+          <th style="width:1%;"></th>
           <th>Company</th>
           <th>Location</th>
           <th>Industry</th>
@@ -189,6 +222,10 @@
       <tbody>
         {% for company in unassigned_companies %}
         <tr>
+          <td>
+            <input type="checkbox" class="form-check-input company-checkbox"
+                   name="company_ids" value="{{ company.pk }}">
+          </td>
           <td class="fw-semibold">{{ company.name }}</td>
           <td>
             <small class="text-muted">
@@ -197,11 +234,16 @@
           </td>
           <td><small class="text-muted">{{ company.industry|default:"—" }}</small></td>
           <td><small class="text-muted">{{ company.primary_contact_name|default:"—" }}</small></td>
-          <td class="text-end">
+          <td class="text-end text-nowrap">
             <a href="{% url 'staff_assign' %}?company={{ company.pk }}"
                class="btn btn-sm btn-outline-primary">
               <i class="bi bi-person-plus"></i> Assign
             </a>
+            <button type="submit" name="delete_one" value="{{ company.pk }}"
+                    class="btn btn-sm btn-outline-danger" title="Delete company"
+                    onclick="return confirm('Delete this company? This also removes its assignments, contact attempts and visit notes. This cannot be undone.')">
+              <i class="bi bi-trash"></i>
+            </button>
           </td>
         </tr>
         {% endfor %}
@@ -217,4 +259,47 @@
 </div>
 {% endif %}
 
+{% if request.user.is_staff %}
+</form>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var form = document.getElementById('companyDeleteForm');
+  if (!form) return;
+  var boxes     = form.querySelectorAll('.company-checkbox');
+  var selectAll = document.getElementById('selectAllCompanies');
+  var counter   = document.getElementById('selectedCount');
+
+  function checkedCount() {
+    return form.querySelectorAll('.company-checkbox:checked').length;
+  }
+  function update() {
+    var n = checkedCount();
+    counter.textContent = n ? n + ' selected' : '';
+    if (selectAll) selectAll.checked = boxes.length > 0 && n === boxes.length;
+  }
+  if (selectAll) {
+    selectAll.addEventListener('change', function () {
+      boxes.forEach(function (b) { b.checked = selectAll.checked; });
+      update();
+    });
+  }
+  boxes.forEach(function (b) { b.addEventListener('change', update); });
+  update();
+
+  window.confirmBulkDelete = function () {
+    var n = checkedCount();
+    if (n === 0) {
+      alert('Select at least one company to delete.');
+      return false;
+    }
+    return confirm('Delete ' + n + ' selected compan' + (n === 1 ? 'y' : 'ies') +
+      '? This also removes their assignments, contact attempts and visit notes. This cannot be undone.');
+  };
+})();
+</script>
 {% endblock %}

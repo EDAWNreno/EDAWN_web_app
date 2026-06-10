@@ -18,7 +18,7 @@ from django.utils.html import format_html
 
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
+from django.utils.http import urlsafe_base64_encode, url_has_allowed_host_and_scheme
 from .emails import notify_admin_welcome, notify_invite
 from .models import Assignment, AssignmentRequest, Badge, Company, ContactAttempt, InviteCode, Message, Notice, Reply, Resource, UserBadge, UserProfile, VisitNote
 from .forms import (RegisterForm, AccountForm, ContactAttemptForm, VisitNoteForm, CompanyContactUpdateForm,
@@ -202,6 +202,46 @@ def quick_assign(request):
         form = QuickAssignForm(initial=initial)
     recent = Assignment.objects.select_related('company', 'volunteer').order_by('-assigned_date')[:5]
     return render(request, 'core/admin_assign.html', {'form': form, 'recent': recent})
+
+
+@staff_member_required
+def staff_delete_companies(request):
+    """Delete one company (via ``delete_one``) or many (via ``company_ids``).
+
+    Deleting a company cascades to its assignments, contact attempts and visit
+    notes. Redirects back to the originating company list view (preserving
+    filters) when a safe ``next`` URL is supplied.
+    """
+    # Preserve the caller's filtered list view when it's a safe local URL.
+    next_url = request.POST.get('next', '')
+    if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        next_url = ''
+    fallback = next_url or redirect('company_list').url
+
+    if request.method != 'POST':
+        return redirect(fallback)
+
+    single = request.POST.get('delete_one')
+    raw_ids = [single] if single else request.POST.getlist('company_ids')
+    ids = [i for i in raw_ids if i and i.isdigit()]
+
+    if not ids:
+        messages.warning(request, 'No companies selected to delete.')
+        return redirect(fallback)
+
+    companies = Company.objects.filter(pk__in=ids)
+    names = list(companies.values_list('name', flat=True))
+    count = len(names)
+    companies.delete()
+
+    if count == 1:
+        messages.success(request, f'Company "{names[0]}" was deleted.')
+    elif count > 1:
+        messages.success(request, f'{count} companies were deleted.')
+    else:
+        messages.warning(request, 'No matching companies were found to delete.')
+
+    return redirect(fallback)
 
 
 @staff_member_required
@@ -1341,5 +1381,5 @@ def staff_reopen_assignment(request, pk):
 
 
 @login_required
-def volunteer_guide(request):
-    return render(request, 'core/volunteer_guide.html')
+def portal_guide(request):
+    return render(request, 'core/portal_guide.html')

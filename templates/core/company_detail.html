@@ -164,6 +164,28 @@
     </div>
     {% endif %}
 
+    {% if request.user.is_staff %}
+    <!-- Staff: delete company -->
+    <div class="card border-danger mb-4">
+      <div class="card-header py-3 text-danger"><i class="bi bi-trash me-2"></i>Danger Zone</div>
+      <div class="card-body">
+        <p class="small text-muted mb-2">
+          Permanently delete this company. This also removes its assignments,
+          contact attempts and visit notes. This cannot be undone.
+        </p>
+        <form method="post" action="{% url 'staff_delete_companies' %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'company_list' %}">
+          <input type="hidden" name="delete_one" value="{{ company.pk }}">
+          <button type="submit" class="btn btn-sm btn-outline-danger w-100"
+                  onclick="return confirm('Delete &quot;{{ company.name|escapejs }}&quot;? This also removes its assignments, contact attempts and visit notes. This cannot be undone.')">
+            <i class="bi bi-trash me-1"></i>Delete Company
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
   </div>
 
   <!-- RIGHT: Visit notes + contact attempts -->

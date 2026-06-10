@@ -185,8 +185,8 @@
       <a href="{% url 'resource_list' %}" class="nav-link {% if request.resolver_match.url_name == 'resource_list' %}active{% endif %}">
         <i class="bi bi-book"></i> Resources
       </a>
-      <a href="{% url 'volunteer_guide' %}" class="nav-link {% if request.resolver_match.url_name == 'volunteer_guide' %}active{% endif %}" target="_blank">
-        <i class="bi bi-journal-text"></i> Volunteer Guide
+      <a href="{% url 'portal_guide' %}" class="nav-link {% if request.resolver_match.url_name == 'portal_guide' %}active{% endif %}" target="_blank">
+        <i class="bi bi-journal-text"></i> Portal Guide
       </a>
       {% if user.is_staff %}
       <hr class="mx-3 my-1" style="border-color:rgba(255,255,255,.2)">

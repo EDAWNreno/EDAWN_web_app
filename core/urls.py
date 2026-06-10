@@ -26,6 +26,7 @@ urlpatterns = [
     path('staff/volunteers/<int:pk>/remove/',        views.remove_volunteer,          name='staff_remove_volunteer'),
     path('staff/add-company/', views.quick_add_company, name='staff_add_company'),
     path('staff/assign/',      views.quick_assign,      name='staff_assign'),
+    path('staff/companies/delete/', views.staff_delete_companies, name='staff_delete_companies'),
     path('staff/invite/',      views.quick_invite,      name='staff_invite'),
     path('staff/create-admin/', views.create_admin,          name='staff_create_admin'),
     path('staff/admins/<int:pk>/remove/', views.remove_admin, name='staff_remove_admin'),
@@ -39,7 +40,7 @@ urlpatterns = [
     path('staff/notices/<int:pk>/delete/', views.staff_notice_delete, name='staff_notice_delete'),
     path('staff/guide/',                   views.staff_guide,          name='staff_guide'),
     path('staff/assignments/<int:pk>/reopen/', views.staff_reopen_assignment, name='staff_reopen_assignment'),
-    path('volunteer-guide/',               views.volunteer_guide,      name='volunteer_guide'),
+    path('portal-guide/',                  views.portal_guide,         name='portal_guide'),
 
     # Resources
     path('resources/',                   views.resource_list,   name='resource_list'),
