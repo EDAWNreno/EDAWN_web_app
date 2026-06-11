@@ -238,13 +238,14 @@ class AssignmentInline(admin.TabularInline):
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display   = ('name', 'city', 'state', 'industry', 'status', 'primary_contact_name', 'phone')
-    list_filter    = ('status', 'state', 'industry')
+    list_display   = ('name', 'city', 'state', 'industry', 'status', 'is_deleted', 'primary_contact_name', 'phone')
+    list_filter    = ('is_deleted', 'status', 'state', 'industry')
     search_fields  = ('name', 'city', 'industry', 'primary_contact_name', 'email', 'phone')
     list_editable  = ('status',)
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at', 'deleted_at')
     ordering       = ('name',)
     inlines        = [AssignmentInline]
+    actions        = ['restore_companies']
     fieldsets = (
         ('Company Info', {
             'fields': ('name', 'industry', 'status', 'notes'),
@@ -255,11 +256,23 @@ class CompanyAdmin(admin.ModelAdmin):
         ('Contact Info', {
             'fields': ('phone', 'email', 'website', 'primary_contact_name', 'primary_contact_title'),
         }),
+        ('Status', {
+            'fields': ('is_deleted', 'deleted_at'),
+        }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',),
         }),
     )
+
+    def get_queryset(self, request):
+        # Show soft-deleted companies in the admin so they can be restored.
+        return Company.all_objects.get_queryset()
+
+    @admin.action(description='Restore selected companies')
+    def restore_companies(self, request, queryset):
+        count = queryset.update(is_deleted=False, deleted_at=None)
+        self.message_user(request, f'{count} compan{"y" if count == 1 else "ies"} restored.')
 
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
@@ -311,7 +324,7 @@ class CompanyAdmin(admin.ModelAdmin):
                         'notes':                 'notes',
                     }
 
-                    created = updated = skipped = 0
+                    created = updated = skipped = restored = 0
                     row_errors = []
 
                     for i, row in enumerate(reader, start=2):
@@ -327,9 +340,16 @@ class CompanyAdmin(admin.ModelAdmin):
                             if val:
                                 data[model_field] = val
 
-                        existing = Company.objects.filter(name__iexact=name).first()
+                        existing = Company.all_objects.filter(name__iexact=name).first()
                         if existing:
-                            if overwrite:
+                            if existing.is_deleted:
+                                for field, val in data.items():
+                                    setattr(existing, field, val)
+                                existing.is_deleted = False
+                                existing.deleted_at = None
+                                existing.save()
+                                restored += 1
+                            elif overwrite:
                                 for field, val in data.items():
                                     setattr(existing, field, val)
                                 existing.save()
@@ -341,7 +361,10 @@ class CompanyAdmin(admin.ModelAdmin):
                             Company.objects.create(**data)
                             created += 1
 
-                    summary = f"Import complete: {created} created, {updated} updated, {skipped} skipped."
+                    summary = (
+                        f"Import complete: {created} created, {updated} updated, "
+                        f"{restored} restored, {skipped} skipped."
+                    )
                     if row_errors:
                         summary += " Errors: " + "; ".join(row_errors[:5])
                     messages.success(request, summary)

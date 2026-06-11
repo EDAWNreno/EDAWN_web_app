@@ -179,7 +179,7 @@
             {% if request.user.is_staff %}
             <button type="submit" name="delete_one" value="{{ assignment.company.pk }}"
                     class="btn btn-sm btn-outline-danger" title="Delete company"
-                    onclick="return confirm('Delete this company? This also removes its assignments, contact attempts and visit notes. This cannot be undone.')">
+                    onclick="return confirm('Delete this company? Its history is kept and can be restored by re-adding the company by name.')">
               <i class="bi bi-trash"></i>
             </button>
             {% endif %}
@@ -241,7 +241,7 @@
             </a>
             <button type="submit" name="delete_one" value="{{ company.pk }}"
                     class="btn btn-sm btn-outline-danger" title="Delete company"
-                    onclick="return confirm('Delete this company? This also removes its assignments, contact attempts and visit notes. This cannot be undone.')">
+                    onclick="return confirm('Delete this company? Its history is kept and can be restored by re-adding the company by name.')">
               <i class="bi bi-trash"></i>
             </button>
           </td>
@@ -298,7 +298,7 @@
       return false;
     }
     return confirm('Delete ' + n + ' selected compan' + (n === 1 ? 'y' : 'ies') +
-      '? This also removes their assignments, contact attempts and visit notes. This cannot be undone.');
+      '? Their history is kept and can be restored by re-adding a company by name.');
   };
 })();
 </script>

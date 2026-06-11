@@ -6,6 +6,14 @@ from django.contrib.auth.models import User
 from django.db.models import Count, Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
+
+
+class CompanyManager(models.Manager):
+    """Default manager that hides soft-deleted companies from normal queries."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
 
 
 class Company(models.Model):
@@ -33,15 +41,34 @@ class Company(models.Model):
     primary_contact_title = models.CharField(max_length=100, blank=True)
     notes                 = models.TextField(blank=True, help_text="Internal admin notes")
     status                = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_UNASSIGNED, db_index=True)
+    is_deleted            = models.BooleanField(default=False, db_index=True)
+    deleted_at            = models.DateTimeField(null=True, blank=True)
     created_at            = models.DateTimeField(auto_now_add=True)
     updated_at            = models.DateTimeField(auto_now=True)
+
+    # ``objects`` hides soft-deleted companies; ``all_objects`` sees everything.
+    # ``base_manager_name`` makes related access (e.g. ``assignment.company``)
+    # use the unfiltered manager so history stays reachable after a soft delete.
+    objects     = CompanyManager()
+    all_objects = models.Manager()
 
     class Meta:
         verbose_name_plural = 'Companies'
         ordering = ['name']
+        base_manager_name = 'all_objects'
 
     def __str__(self):
         return self.name
+
+    def soft_delete(self):
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=['is_deleted', 'deleted_at'])
+
+    def restore(self):
+        self.is_deleted = False
+        self.deleted_at = None
+        self.save(update_fields=['is_deleted', 'deleted_at'])
 
     @property
     def maps_url(self):

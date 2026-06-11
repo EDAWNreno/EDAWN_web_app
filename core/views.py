@@ -100,6 +100,7 @@ def dashboard(request):
     active_assignments = (
         Assignment.objects
         .filter(volunteer=user, status=Assignment.STATUS_ACTIVE)
+        .exclude(company__is_deleted=True)
         .select_related('company')
         .order_by('company__name')
     )
@@ -152,8 +153,24 @@ def quick_add_company(request):
     if request.method == 'POST':
         form = QuickCompanyForm(request.POST)
         if form.is_valid():
-            company = form.save()
-            messages.success(request, f'Company "{company.name}" added.')
+            name = form.cleaned_data['name']
+            deleted_match = Company.all_objects.filter(
+                name__iexact=name, is_deleted=True
+            ).first()
+            if deleted_match:
+                # Restore the soft-deleted company and refresh its details.
+                for field, value in form.cleaned_data.items():
+                    setattr(deleted_match, field, value)
+                deleted_match.is_deleted = False
+                deleted_match.deleted_at = None
+                deleted_match.save()
+                messages.success(
+                    request,
+                    f'Company "{deleted_match.name}" was restored with its previous history.'
+                )
+            else:
+                company = form.save()
+                messages.success(request, f'Company "{company.name}" added.')
             return redirect('staff_add_company')
     else:
         form = QuickCompanyForm()
@@ -206,11 +223,13 @@ def quick_assign(request):
 
 @staff_member_required
 def staff_delete_companies(request):
-    """Delete one company (via ``delete_one``) or many (via ``company_ids``).
+    """Soft-delete one company (via ``delete_one``) or many (via ``company_ids``).
 
-    Deleting a company cascades to its assignments, contact attempts and visit
-    notes. Redirects back to the originating company list view (preserving
-    filters) when a safe ``next`` URL is supplied.
+    Companies are flagged ``is_deleted`` rather than removed, so their
+    assignments, contact attempts and visit notes are preserved and can be
+    restored later by re-adding a company with the same name. Redirects back to
+    the originating company list view (preserving filters) when a safe ``next``
+    URL is supplied.
     """
     # Preserve the caller's filtered list view when it's a safe local URL.
     next_url = request.POST.get('next', '')
@@ -231,13 +250,12 @@ def staff_delete_companies(request):
 
     companies = Company.objects.filter(pk__in=ids)
     names = list(companies.values_list('name', flat=True))
-    count = len(names)
-    companies.delete()
+    count = companies.update(is_deleted=True, deleted_at=timezone.now())
 
     if count == 1:
-        messages.success(request, f'Company "{names[0]}" was deleted.')
+        messages.success(request, f'Company "{names[0]}" was deleted. Re-add it by name to restore its history.')
     elif count > 1:
-        messages.success(request, f'{count} companies were deleted.')
+        messages.success(request, f'{count} companies were deleted. Re-add one by name to restore its history.')
     else:
         messages.warning(request, 'No matching companies were found to delete.')
 
@@ -351,11 +369,12 @@ def company_list(request):
     volunteer_filter = request.GET.get('volunteer', '') if request.user.is_staff else ''
 
     if request.user.is_staff:
-        base_qs = (Assignment.objects.all()
+        base_qs = (Assignment.objects.exclude(company__is_deleted=True)
                    .select_related('company', 'volunteer')
                    .prefetch_related('contact_attempts'))
     else:
         base_qs = (Assignment.objects.filter(volunteer=request.user)
+                   .exclude(company__is_deleted=True)
                    .select_related('company')
                    .prefetch_related('contact_attempts'))
 
@@ -868,7 +887,7 @@ def staff_import_csv(request):
             try:
                 decoded = request.FILES['csv_file'].read().decode('utf-8-sig')
                 reader  = csv.DictReader(io.StringIO(decoded))
-                created = updated = skipped = 0
+                created = updated = skipped = restored = 0
                 row_errors = []
 
                 for i, row in enumerate(reader, start=2):
@@ -882,9 +901,17 @@ def staff_import_csv(request):
                         for csv_col, model_field in _CSV_FIELD_MAP.items()
                         if row.get(csv_col, '').strip()
                     }
-                    existing = Company.objects.filter(name__iexact=name).first()
+                    existing = Company.all_objects.filter(name__iexact=name).first()
                     if existing:
-                        if overwrite:
+                        if existing.is_deleted:
+                            # Restore the soft-deleted company, refreshing details.
+                            for field, val in data.items():
+                                setattr(existing, field, val)
+                            existing.is_deleted = False
+                            existing.deleted_at = None
+                            existing.save()
+                            restored += 1
+                        elif overwrite:
                             for field, val in data.items():
                                 setattr(existing, field, val)
                             existing.save()
@@ -896,7 +923,10 @@ def staff_import_csv(request):
                         Company.objects.create(**data)
                         created += 1
 
-                summary = f"Import complete: {created} created, {updated} updated, {skipped} skipped."
+                summary = (
+                    f"Import complete: {created} created, {updated} updated, "
+                    f"{restored} restored, {skipped} skipped."
+                )
                 if row_errors:
                     summary += "  Errors: " + "; ".join(row_errors[:5])
                 messages.success(request, summary)

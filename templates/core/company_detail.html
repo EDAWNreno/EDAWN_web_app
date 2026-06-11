@@ -170,15 +170,16 @@
       <div class="card-header py-3 text-danger"><i class="bi bi-trash me-2"></i>Danger Zone</div>
       <div class="card-body">
         <p class="small text-muted mb-2">
-          Permanently delete this company. This also removes its assignments,
-          contact attempts and visit notes. This cannot be undone.
+          Delete this company. It will be hidden from all lists, but its
+          assignments, contact attempts and visit notes are kept — re-add the
+          company by name later to restore everything.
         </p>
         <form method="post" action="{% url 'staff_delete_companies' %}">
           {% csrf_token %}
           <input type="hidden" name="next" value="{% url 'company_list' %}">
           <input type="hidden" name="delete_one" value="{{ company.pk }}">
           <button type="submit" class="btn btn-sm btn-outline-danger w-100"
-                  onclick="return confirm('Delete &quot;{{ company.name|escapejs }}&quot;? This also removes its assignments, contact attempts and visit notes. This cannot be undone.')">
+                  onclick="return confirm('Delete &quot;{{ company.name|escapejs }}&quot;? Its history is kept and can be restored by re-adding the company by name.')">
             <i class="bi bi-trash me-1"></i>Delete Company
           </button>
         </form>
