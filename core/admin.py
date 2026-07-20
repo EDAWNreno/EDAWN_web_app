@@ -18,8 +18,8 @@ from .models import Assignment, AssignmentRequest, Badge, Company, ContactAttemp
 # ---------------------------------------------------------------------------
 # Site branding
 # ---------------------------------------------------------------------------
-admin.site.site_header  = "EDAWN Administration"
-admin.site.site_title   = "EDAWN Admin"
+admin.site.site_header  = "Northern NV Now Administration"
+admin.site.site_title   = "Northern NV Now Admin"
 admin.site.index_title  = "Dashboard"
 
 

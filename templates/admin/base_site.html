@@ -1,76 +1,76 @@
 {% extends "admin/base.html" %}
 {% load static %}
 
-{% block title %}{{ title }} | EDAWN Admin{% endblock %}
+{% block title %}{{ title }} | Northern NV Now Admin{% endblock %}
 
 {% block extrastyle %}
 {{ block.super }}
 <style>
   :root {
-    --primary: #008b99;
-    --secondary: #014684;
-    --accent: #008b99;
-    --header-color: #014684;
-    --header-branding-color: #014684;
+    --primary: #ed7626;
+    --secondary: #00455b;
+    --accent: #ed7626;
+    --header-color: #00455b;
+    --header-branding-color: #00455b;
   }
 
   /* Top header bar */
   #header {
-    background: #014684;
+    background: #00455b;
     color: #fff;
   }
   #header a:link, #header a:visited {
     color: #fff;
   }
   #header a:hover {
-    color: #e0f5f7;
+    color: #fff2e8;
   }
 
   /* Breadcrumbs */
   div.breadcrumbs {
-    background: #008b99;
+    background: #ed7626;
     color: #fff;
   }
   div.breadcrumbs a {
     color: #fff;
   }
   div.breadcrumbs a:hover {
-    color: #e0f5f7;
+    color: #fff2e8;
   }
 
   /* Module headers / captions */
   .module h2, .module caption {
-    background: #014684;
+    background: #00455b;
     color: #fff;
   }
 
   /* Links */
   a:link, a:visited {
-    color: #008b99;
+    color: #ed7626;
   }
   a:hover {
-    color: #014684;
+    color: #00455b;
   }
 
   /* Buttons */
   .submit-row input, .submit-row a.button,
   input[type="submit"], .button, a.button {
-    background: #008b99;
-    border-color: #008b99;
+    background: #ed7626;
+    border-color: #ed7626;
     color: #fff;
   }
   .submit-row input:hover, .submit-row a.button:hover,
   input[type="submit"]:hover, .button:hover, a.button:hover {
-    background: #014684;
-    border-color: #014684;
+    background: #00455b;
+    border-color: #00455b;
   }
   input[type="submit"].default, .submit-row input.default {
-    background: #008b99;
-    border-color: #008b99;
+    background: #ed7626;
+    border-color: #ed7626;
   }
   input[type="submit"].default:hover, .submit-row input.default:hover {
-    background: #014684;
-    border-color: #014684;
+    background: #00455b;
+    border-color: #00455b;
   }
 
   /* Delete / danger button stays red */
@@ -82,41 +82,41 @@
   .calendar td a:hover, .timelist a:hover,
   .calendarbox .calendarnav-previous:hover,
   .calendarbox .calendarnav-next:hover {
-    background: #008b99;
+    background: #ed7626;
     color: #fff;
   }
 
   /* Selected row highlight */
   .results table tbody tr.selected {
-    background: #e0f5f7;
+    background: #fff2e8;
   }
 
   /* Object tools (action bar buttons) */
   .object-tools a,
   .object-tools a:link,
   .object-tools a:visited {
-    background: #008b99;
+    background: #ed7626;
     color: #fff;
     border-radius: 4px;
   }
   .object-tools a:hover {
-    background: #014684;
+    background: #00455b;
   }
   .object-tools a.addlink {
-    background: #008b99;
+    background: #ed7626;
   }
   .object-tools a.addlink:hover {
-    background: #014684;
+    background: #00455b;
   }
 
   /* Change list filters */
   #changelist-filter h2 {
-    background: #014684;
+    background: #00455b;
     color: #fff;
     padding: 8px 12px;
   }
   #changelist-filter li.selected a {
-    color: #014684;
+    color: #00455b;
     font-weight: 700;
   }
 
@@ -128,20 +128,20 @@
 
   /* Related widget wrapper buttons */
   .related-widget-wrapper-link {
-    color: #008b99;
+    color: #ed7626;
   }
   .related-widget-wrapper-link:hover {
-    color: #014684;
+    color: #00455b;
   }
 
   /* Inline group headers */
   .inline-group h2 {
-    background: #014684;
+    background: #00455b;
     color: #fff;
   }
   .inline-related h3 {
-    background: #e3edf7;
-    color: #014684;
+    background: #e7f0f2;
+    color: #00455b;
     border-color: #c6d6e8;
   }
 
@@ -159,7 +159,7 @@
   }
   #user-tools a:hover {
     color: #fff;
-    border-bottom-color: #008b99;
+    border-bottom-color: #ed7626;
   }
 </style>
 {% endblock %}
@@ -167,8 +167,8 @@
 {% block branding %}
 <div id="site-name">
   <a href="{% url 'admin:index' %}" style="display:flex; align-items:center; gap:8px;">
-    <img src="{% static 'img/edawn-logo-white.png' %}" alt="EDAWN" style="height:28px;">
-    EDAWN Administration
+    <img src="{% static 'img/northern-nv-now-primary-white.svg' %}" alt="Northern NV Now" style="height:28px;">
+    Administration
   </a>
 </div>
 {% endblock %}

@@ -225,7 +225,7 @@ class Badge(models.Model):
     name            = models.CharField(max_length=100, unique=True)
     description     = models.TextField()
     icon            = models.CharField(max_length=50, help_text="Bootstrap icon class, e.g. bi-star")
-    color           = models.CharField(max_length=7, default='#008b99', help_text="Hex color for the badge")
+    color           = models.CharField(max_length=7, default='#ed7626', help_text="Hex color for the badge")
     criteria_type   = models.CharField(max_length=30, choices=CRITERIA_CHOICES, default='manual')
     criteria_value  = models.PositiveIntegerField(
         default=0,

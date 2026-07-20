@@ -1,7 +1,7 @@
 {% extends "admin/base_site.html" %}
 {% load i18n static %}
 
-{% block title %}EDAWN Administration{% endblock %}
+{% block title %}Northern NV Now Administration{% endblock %}
 
 {% block content %}
 <style>
@@ -12,37 +12,37 @@
     text-decoration: none; color: #333; transition: box-shadow .15s, border-color .15s, transform .15s;
     display: flex; flex-direction: column; align-items: center; text-align: center;
   }
-  .action-card:hover { box-shadow: 0 4px 16px rgba(1,70,132,.15); border-color: #008b99; color: #333; text-decoration: none; transform: translateY(-2px); }
+  .action-card:hover { box-shadow: 0 4px 16px rgba(1,70,132,.15); border-color: #ed7626; color: #333; text-decoration: none; transform: translateY(-2px); }
   .action-card .icon { font-size: 32px; margin-bottom: 8px; }
-  .action-card .label { font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #014684; }
+  .action-card .label { font-weight: 600; font-size: 15px; margin-bottom: 4px; color: #00455b; }
   .action-card .desc { font-size: 12px; color: #666; }
 
   .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 32px; }
   .stat-card {
     background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;
-    text-align: center; border-top: 3px solid #008b99;
+    text-align: center; border-top: 3px solid #ed7626;
   }
-  .stat-card .number { font-size: 28px; font-weight: 700; color: #014684; }
+  .stat-card .number { font-size: 28px; font-weight: 700; color: #00455b; }
   .stat-card .stat-label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: .5px; }
   .stat-card.warn { border-top-color: #dc3545; }
   .stat-card.warn .number { color: #dc3545; }
 
-  .section-heading { font-size: 16px; font-weight: 600; color: #014684; margin-bottom: 12px; border-bottom: 2px solid #008b99; padding-bottom: 6px; }
+  .section-heading { font-size: 16px; font-weight: 600; color: #00455b; margin-bottom: 12px; border-bottom: 2px solid #ed7626; padding-bottom: 6px; }
 
   .recent-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; border: 1px solid #e0e0e0; }
-  .recent-table th { background: #e3edf7; padding: 10px 14px; text-align: left; font-size: 12px; color: #014684; text-transform: uppercase; letter-spacing: .5px; border-bottom: 2px solid #008b99; }
+  .recent-table th { background: #e7f0f2; padding: 10px 14px; text-align: left; font-size: 12px; color: #00455b; text-transform: uppercase; letter-spacing: .5px; border-bottom: 2px solid #ed7626; }
   .recent-table td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
   .recent-table tr:last-child td { border-bottom: none; }
-  .recent-table tr:hover td { background: #e0f5f7; }
-  .recent-table a { color: #008b99; text-decoration: none; font-weight: 500; }
-  .recent-table a:hover { color: #014684; }
+  .recent-table tr:hover td { background: #fff2e8; }
+  .recent-table a { color: #ed7626; text-decoration: none; font-weight: 500; }
+  .recent-table a:hover { color: #00455b; }
 
   .status-badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
-  .status-active { background: #e0f5f7; color: #006570; }
+  .status-active { background: #fff2e8; color: #006570; }
   .status-completed { background: #d4edda; color: #155724; }
   .status-lost { background: #f8d7da; color: #721c24; }
   .status-unassigned { background: #e2e3e5; color: #383d41; }
-  .status-assigned { background: #e3edf7; color: #014684; }
+  .status-assigned { background: #e7f0f2; color: #00455b; }
   .status-visited { background: #d4edda; color: #155724; }
 
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
@@ -50,19 +50,19 @@
 </style>
 
 <div class="admin-dashboard">
-  <h2 style="color: #014684; margin-bottom: 4px;">Welcome back, {{ user.get_full_name|default:user.username }}</h2>
+  <h2 style="color: #00455b; margin-bottom: 4px;">Welcome back, {{ user.get_full_name|default:user.username }}</h2>
   <p style="color: #666; margin-bottom: 24px;">Manage companies, assignments, and volunteers from here.</p>
 
   <!-- Quick Actions -->
   <h3 class="section-heading">Quick Actions</h3>
   <div class="quick-actions">
     <a href="{% url 'admin:core_company_add' %}" class="action-card">
-      <div class="icon" style="color:#008b99;">&#x1f3e2;</div>
+      <div class="icon" style="color:#ed7626;">&#x1f3e2;</div>
       <div class="label">Add Company</div>
       <div class="desc">Create a new company record</div>
     </a>
     <a href="{% url 'admin:core_assignment_add' %}" class="action-card">
-      <div class="icon" style="color:#014684;">&#x1f91d;</div>
+      <div class="icon" style="color:#00455b;">&#x1f91d;</div>
       <div class="label">Assign Volunteer</div>
       <div class="desc">Assign a company to a volunteer</div>
     </a>
