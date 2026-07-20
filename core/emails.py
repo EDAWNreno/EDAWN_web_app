@@ -114,6 +114,51 @@ def notify_invite(email, invite_link):
     )
 
 
+def notify_staff_private_message(message):
+    """Tell staff when a volunteer sends a private message to admin."""
+    if not settings.EMAIL_HOST_PASSWORD:
+        return
+    staff_emails = _staff_emails()
+    if not staff_emails:
+        return
+    sender_name = message.sender.get_full_name() or message.sender.username
+    send_mail(
+        subject=f'New portal message from {sender_name}',
+        message=(
+            f"{sender_name} sent a private message in the Business Builders portal.\n\n"
+            f"Subject: {message.subject}\n\n"
+            f"View and reply in the portal:\n"
+            f"{_portal_url(f'/messages/{message.pk}/')}\n\n"
+            f"- EDAWN Business Builders"
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=staff_emails,
+        fail_silently=True,
+    )
+
+
+def notify_volunteer_direct_message(message):
+    """Tell a volunteer when staff sends them a direct message."""
+    if not settings.EMAIL_HOST_PASSWORD or not message.recipient or not message.recipient.email:
+        return
+    sender_name = message.sender.get_full_name() or message.sender.username
+    first_name = message.recipient.first_name or message.recipient.username
+    send_mail(
+        subject='New message in the Business Builders portal',
+        message=(
+            f"Hi {first_name},\n\n"
+            f"{sender_name} sent you a direct message in the Business Builders portal.\n\n"
+            f"Subject: {message.subject}\n\n"
+            f"View and reply in the portal:\n"
+            f"{_portal_url(f'/messages/{message.pk}/')}\n\n"
+            f"- EDAWN Business Builders"
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[message.recipient.email],
+        fail_silently=True,
+    )
+
+
 def _staff_emails():
     from django.contrib.auth.models import User
     return list(

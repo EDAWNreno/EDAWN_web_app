@@ -19,7 +19,12 @@ from django.utils.html import format_html
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
-from .emails import notify_admin_welcome, notify_invite
+from .emails import (
+    notify_admin_welcome,
+    notify_invite,
+    notify_staff_private_message,
+    notify_volunteer_direct_message,
+)
 from .models import Assignment, AssignmentRequest, Badge, Company, ContactAttempt, InviteCode, Message, Notice, Reply, Resource, UserBadge, UserProfile, VisitNote
 from .forms import (RegisterForm, AccountForm, ContactAttemptForm, VisitNoteForm, CompanyContactUpdateForm,
                      MessageForm, ReplyForm, QuickCompanyForm, QuickAssignForm, InviteAdminForm,
@@ -639,10 +644,11 @@ def message_create(request):
 
                 if recipients is not None:
                     for vol in recipients:
-                        Message.objects.create(
+                        msg = Message.objects.create(
                             sender=request.user, recipient=vol,
                             subject=subject, body=body, is_private=True,
                         )
+                        notify_volunteer_direct_message(msg)
                     count = len(recipients)
                     messages.success(request, f'Message sent to {count} volunteer{"s" if count != 1 else ""}.')
                     return redirect('message_list')
@@ -651,6 +657,8 @@ def message_create(request):
             msg.sender = request.user
             msg.save()
             if msg.is_private:
+                if not request.user.is_staff:
+                    notify_staff_private_message(msg)
                 messages.success(request, 'Private message sent to admin.')
             else:
                 messages.success(request, 'Message posted to the group.')
