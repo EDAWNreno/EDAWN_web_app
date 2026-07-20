@@ -20,10 +20,10 @@
       --brand-orange-dark:#c95718;
       --brand-orange-soft:#fff2e8;
       --brand-deep-soft:  #e7f0f2;
-      --edawn-blue:       var(--brand-deep);
-      --edawn-teal:       var(--brand-orange);
-      --edawn-teal-light: var(--brand-orange-soft);
-      --edawn-blue-light: var(--brand-deep-soft);
+      --brand-primary:       var(--brand-deep);
+      --brand-accent:       var(--brand-orange);
+      --brand-accent-soft: var(--brand-orange-soft);
+      --brand-primary-soft: var(--brand-deep-soft);
     }
 
     body {
@@ -32,24 +32,24 @@
     }
 
     /* ── Navbar ── */
-    .navbar-edawn {
-      background: var(--edawn-blue);
+    .navbar-brandbar {
+      background: var(--brand-primary);
       padding: .9rem 0;
     }
-    .navbar-edawn .navbar-brand img { max-height: 52px; }
+    .navbar-brandbar .navbar-brand img { max-height: 52px; }
     @media (max-width: 576px) {
-      .navbar-edawn { padding: .5rem 0; }
-      .navbar-edawn .navbar-brand img { max-height: 32px; }
+      .navbar-brandbar { padding: .5rem 0; }
+      .navbar-brandbar .navbar-brand img { max-height: 32px; }
     }
-    .navbar-edawn .btn-login {
-      background: var(--edawn-teal);
-      border-color: var(--edawn-teal);
+    .navbar-brandbar .btn-login {
+      background: var(--brand-accent);
+      border-color: var(--brand-accent);
       color: #fff;
       font-weight: 600;
       padding: .45rem 1.25rem;
       border-radius: 6px;
     }
-    .navbar-edawn .btn-login:hover {
+    .navbar-brandbar .btn-login:hover {
       background: var(--brand-orange-dark);
       border-color: var(--brand-orange-dark);
       color: #fff;
@@ -96,8 +96,8 @@
       margin-bottom: 2rem;
     }
     .btn-hero-primary {
-      background: var(--edawn-teal);
-      border-color: var(--edawn-teal);
+      background: var(--brand-accent);
+      border-color: var(--brand-accent);
       color: #fff;
       font-weight: 700;
       font-size: 1rem;
@@ -149,19 +149,19 @@
       font-weight: 700;
       letter-spacing: .12em;
       text-transform: uppercase;
-      color: var(--edawn-teal);
+      color: var(--brand-accent);
       margin-bottom: .5rem;
     }
     .section-title {
       font-size: clamp(1.6rem, 3vw, 2.2rem);
       font-weight: 800;
-      color: var(--edawn-blue);
+      color: var(--brand-primary);
       margin-bottom: 1rem;
     }
     .section-divider {
       width: 52px;
       height: 4px;
-      background: var(--edawn-teal);
+      background: var(--brand-accent);
       border-radius: 2px;
       margin-bottom: 1.5rem;
     }
@@ -169,19 +169,19 @@
     /* ── About ── */
     .about-section { padding: 5rem 0; background: #fff; }
     .about-img-card {
-      background: var(--edawn-blue-light);
+      background: var(--brand-primary-soft);
       border-radius: 16px;
       padding: 2.5rem;
       text-align: center;
     }
     .about-img-card i {
       font-size: 5rem;
-      color: var(--edawn-blue);
+      color: var(--brand-primary);
       margin-bottom: 1rem;
     }
     .about-img-card p {
       font-size: 1rem;
-      color: var(--edawn-blue);
+      color: var(--brand-primary);
       font-weight: 600;
     }
 
@@ -198,7 +198,7 @@
     .step-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,.12); }
     .step-number {
       width: 48px; height: 48px;
-      background: var(--edawn-teal);
+      background: var(--brand-accent);
       color: #fff;
       font-weight: 800;
       font-size: 1.1rem;
@@ -210,7 +210,7 @@
     }
     .step-card h5 {
       font-weight: 700;
-      color: var(--edawn-blue);
+      color: var(--brand-primary);
       margin-bottom: .6rem;
     }
     .step-card p { color: #555; font-size: .95rem; margin: 0; }
@@ -218,7 +218,7 @@
     /* ── Impact ── */
     .impact-section {
       padding: 5rem 0;
-      background: var(--edawn-blue);
+      background: var(--brand-primary);
       color: #fff;
     }
     .impact-section .section-title { color: #fff; }
@@ -256,18 +256,18 @@
     .benefit-icon {
       flex-shrink: 0;
       width: 44px; height: 44px;
-      background: var(--edawn-teal-light);
+      background: var(--brand-accent-soft);
       border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
-    .benefit-icon i { color: var(--edawn-teal); font-size: 1.2rem; }
-    .benefit-item h6 { font-weight: 700; color: var(--edawn-blue); margin-bottom: .2rem; }
+    .benefit-icon i { color: var(--brand-accent); font-size: 1.2rem; }
+    .benefit-item h6 { font-weight: 700; color: var(--brand-primary); margin-bottom: .2rem; }
     .benefit-item p { color: #666; font-size: .9rem; margin: 0; }
 
     /* ── Contact / CTA ── */
-    .contact-section { padding: 5rem 0; background: var(--edawn-teal-light); }
+    .contact-section { padding: 5rem 0; background: var(--brand-accent-soft); }
     .contact-card {
       background: #fff;
       border-radius: 18px;
@@ -279,15 +279,15 @@
     }
     .contact-card .icon-circle {
       width: 72px; height: 72px;
-      background: var(--edawn-teal-light);
+      background: var(--brand-accent-soft);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       margin: 0 auto 1.5rem;
     }
-    .contact-card .icon-circle i { font-size: 1.8rem; color: var(--edawn-teal); }
-    .contact-card h3 { font-weight: 800; color: var(--edawn-blue); margin-bottom: .75rem; }
+    .contact-card .icon-circle i { font-size: 1.8rem; color: var(--brand-accent); }
+    .contact-card h3 { font-weight: 800; color: var(--brand-primary); margin-bottom: .75rem; }
     .contact-card p { color: #555; margin-bottom: 2rem; }
     .contact-info-row {
       display: flex;
@@ -300,19 +300,19 @@
       display: inline-flex;
       align-items: center;
       gap: .5rem;
-      background: var(--edawn-blue-light);
+      background: var(--brand-primary-soft);
       border-radius: 50px;
       padding: .55rem 1.25rem;
       font-size: .95rem;
-      color: var(--edawn-blue);
+      color: var(--brand-primary);
       font-weight: 600;
       text-decoration: none;
     }
-    .contact-chip:hover { background: #d6e5e8; color: var(--edawn-blue); }
-    .contact-chip i { color: var(--edawn-teal); }
+    .contact-chip:hover { background: #d6e5e8; color: var(--brand-primary); }
+    .contact-chip i { color: var(--brand-accent); }
     .btn-contact {
-      background: var(--edawn-teal);
-      border-color: var(--edawn-teal);
+      background: var(--brand-accent);
+      border-color: var(--brand-accent);
       color: #fff;
       font-weight: 700;
       font-size: 1rem;
@@ -320,14 +320,14 @@
       border-radius: 8px;
     }
     .btn-contact:hover {
-      background: var(--edawn-blue);
-      border-color: var(--edawn-blue);
+      background: var(--brand-primary);
+      border-color: var(--brand-primary);
       color: #fff;
     }
 
     /* ── Footer ── */
     .footer {
-      background: var(--edawn-blue);
+      background: var(--brand-primary);
       color: rgba(255,255,255,.6);
       padding: 2rem 0;
       font-size: .85rem;
@@ -339,7 +339,7 @@
 <body>
 
 <!-- Navbar -->
-<nav class="navbar navbar-edawn">
+<nav class="navbar navbar-brandbar">
   <div class="container d-flex align-items-center justify-content-between">
     <a class="navbar-brand" href="{% url 'landing' %}">
       <img src="{% static 'img/northern-nv-now-primary-white.svg' %}" alt="Northern NV Now">
@@ -412,17 +412,17 @@
         <p class="mb-3">
           The <strong>Northern NV Now Business Builders</strong> program is a volunteer-based outreach initiative
           focused on Business Retention and Expansion (BRE) across Greater Reno-Sparks. Relaunched
-          in Spring 2025, the program mobilizes EDAWN investor-volunteers to directly engage with
+          in Spring 2025, the program mobilizes Northern NV Now investor-volunteers to directly engage with
           existing businesses in the region.
         </p>
         <p class="mb-3">
-          Business Builder volunteers work alongside EDAWN's program staff to visit targeted companies,
+          Business Builder volunteers work alongside Northern NV Now's program staff to visit targeted companies,
           listen to their needs, connect them with resources, and help remove barriers to growth.
           The program currently focuses on key industry groups including finance and logistics, with
           findings and recommendations presented to stakeholders each quarter.
         </p>
         <p>
-          EDAWN's mission is to add quality jobs to the region, support the success of existing
+          Northern NV Now's mission is to add quality jobs to the region, support the success of existing
           companies, assist newly forming businesses, and diversify the economy — all while positively
           impacting the quality of life in Northern Nevada.
         </p>
@@ -448,7 +448,7 @@
         <div class="step-card">
           <div class="step-number">1</div>
           <h5>Get Assigned</h5>
-          <p>Volunteers are paired with targeted local businesses based on industry focus areas identified by EDAWN.</p>
+          <p>Volunteers are paired with targeted local businesses based on industry focus areas identified by Northern NV Now.</p>
         </div>
       </div>
       <div class="col-sm-6 col-lg-3">
@@ -469,7 +469,7 @@
         <div class="step-card">
           <div class="step-number">4</div>
           <h5>Connect Resources</h5>
-          <p>Link businesses with workforce training, community partners, economic development tools, and EDAWN's broader network.</p>
+          <p>Link businesses with workforce training, community partners, economic development tools, and Northern NV Now's broader network.</p>
         </div>
       </div>
     </div>
@@ -546,7 +546,7 @@
           <div class="benefit-icon"><i class="bi bi-people"></i></div>
           <div>
             <h6>Expand Your Professional Network</h6>
-            <p>Work alongside EDAWN's team and other community leaders, growing your own connections across key industry sectors.</p>
+            <p>Work alongside Northern NV Now's team and other community leaders, growing your own connections across key industry sectors.</p>
           </div>
         </div>
       </div>
@@ -554,12 +554,12 @@
         <div class="section-eyebrow">Who Can Participate</div>
         <h2 class="section-title">Is This Program For You?</h2>
         <div class="section-divider"></div>
-        <p class="mb-4">The Business Builders program is designed for EDAWN investors and community partners who are passionate about Northern Nevada's economic future and want to make a tangible difference.</p>
+        <p class="mb-4">The Business Builders program is designed for Northern NV Now investors and community partners who are passionate about Northern Nevada's economic future and want to make a tangible difference.</p>
         <div class="card border-0 shadow-sm mb-3">
           <div class="card-body d-flex align-items-start gap-3">
             <i class="bi bi-check-circle-fill text-success fs-5 mt-1"></i>
             <div>
-              <strong>EDAWN Investors & Partners</strong>
+              <strong>Northern NV Now Investors & Partners</strong>
               <p class="mb-0 text-muted small">Members at any investment level are welcome to participate as volunteer Business Builders.</p>
             </div>
           </div>
@@ -583,9 +583,9 @@
           </div>
         </div>
         <p class="text-muted small mt-3">
-          Not an EDAWN investor?
+          Not a Northern NV Now investor?
           <a href="https://www.edawn.org/become-an-investor/" target="_blank" rel="noopener"
-             style="color:var(--edawn-teal); font-weight:600;">Find out about investing here.</a>
+             style="color:var(--brand-accent); font-weight:600;">Find out about investing here.</a>
         </p>
       </div>
     </div>
@@ -607,7 +607,7 @@
       <div class="contact-info-row">
         <a href="mailto:yaegar@edawn.org" class="contact-chip">
           <i class="bi bi-envelope-fill"></i>
-          yaegar@edawn.org
+          Email Kim Yaegar
         </a>
         <span class="contact-chip" style="cursor:default;">
           <i class="bi bi-person-badge-fill"></i>
@@ -618,7 +618,7 @@
         <i class="bi bi-send me-2"></i>Contact Kim Yaegar
       </a>
       <div class="mt-4 pt-3 border-top text-muted" style="font-size:.85rem;">
-        Already a volunteer? <a href="{% url 'login' %}" style="color:var(--edawn-teal); font-weight:600;">Sign in to your portal</a> to log visits and track your progress.
+        Already a volunteer? <a href="{% url 'login' %}" style="color:var(--brand-accent); font-weight:600;">Sign in to your portal</a> to log visits and track your progress.
       </div>
     </div>
   </div>
@@ -630,10 +630,10 @@
     <div class="d-flex align-items-center gap-4 flex-wrap justify-content-center">
       <img src="{% static 'img/northern-nv-now-descriptor-white.svg' %}" alt="Northern NV Now" style="max-height:72px; opacity:.9; flex-shrink:0;">
       <div class="text-center text-md-start">
-        <div class="mb-1" style="color:rgba(255,255,255,.8);">Economic Development Authority of Western Nevada</div>
+        <div class="mb-1" style="color:rgba(255,255,255,.8);">Northern NV Now</div>
         <div class="mb-1">50 W. Liberty Street, Suite 108 &bull; Reno, NV 89501 &bull; (775) 829-3700</div>
         <div>
-          <a href="https://www.edawn.org" target="_blank" rel="noopener">edawn.org</a>
+          <a href="https://www.edawn.org" target="_blank" rel="noopener">Northern NV Now website</a>
           &bull;
           <a href="{% url 'login' %}">Volunteer Portal</a>
         </div>
