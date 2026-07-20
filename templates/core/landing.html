@@ -57,11 +57,17 @@
 
     /* ── Hero ── */
     .hero {
-      background: var(--brand-deep);
+      background: #050505;
       color: #fff;
       padding: 5rem 0 4rem;
       position: relative;
       overflow: hidden;
+    }
+    .program-logo-hero {
+      display: block;
+      width: min(100%, 620px);
+      height: auto;
+      margin-bottom: 1.5rem;
     }
     .hero .badge-tag {
       display: inline-block;
@@ -356,7 +362,8 @@
     <div class="row align-items-center">
       <div class="col-lg-8">
         <div class="badge-tag">Northern Nevada Now</div>
-        <h1><span>Business Builders</span> Program</h1>
+        <img src="{% static 'img/business-builders-program-white.png' %}" alt="Northern NV Now's Business Builders Program" class="program-logo-hero">
+        <h1 class="visually-hidden">Northern NV Now's Business Builders Program</h1>
         <p class="lead">
           A volunteer-powered outreach initiative connecting Northern Nevada's business community
           - supporting growth, creating quality jobs, and strengthening our regional economy.
