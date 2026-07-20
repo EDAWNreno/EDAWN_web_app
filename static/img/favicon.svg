@@ -1,6 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Northern NV Now">
-  <rect width="32" height="32" rx="7" fill="#00455b"/>
-  <path d="M7 23V9h4.1l9.8 14H25V9h-4.1v7.4L15.7 9H7z" fill="#fff"/>
-  <path d="M7 23h4.1v-7.4l5.2 7.4H25v-4.1h-6.6L11.1 9H7z" fill="#ed7626"/>
-  <path d="M11.1 9 25 23h-4.1L7 9z" fill="#fff" opacity=".92"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 230" role="img" aria-label="Northern NV Now Business Builders">
+  <g fill="none" stroke="#ed7626" stroke-width="17" stroke-linecap="butt">
+    <path d="M115 13v69"/>
+    <path d="M70 26l34 59"/>
+    <path d="M160 26l-34 59"/>
+    <path d="M37 61l60 35"/>
+    <path d="M193 61l-60 35"/>
+    <path d="M24 113h72"/>
+    <path d="M134 113h72"/>
+    <path d="M37 165l60-35"/>
+    <path d="M193 165l-60-35"/>
+  </g>
+  <circle cx="115" cy="113" r="22" fill="transparent"/>
+  <path d="M68 205l47-47 47 47" fill="none" stroke="#00455b" stroke-width="19" stroke-linecap="butt" stroke-linejoin="miter"/>
 </svg>
