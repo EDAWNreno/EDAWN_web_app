@@ -2,11 +2,15 @@ from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 
+from core.forms import EmailOrUsernameAuthenticationForm
 from core.ratelimit import ratelimit
 
 # Rate-limit login: 5 attempts per IP per 5 minutes
 _login_view = ratelimit(max_attempts=5, window=300, key_prefix='login')(
-    auth_views.LoginView.as_view(template_name='registration/login.html')
+    auth_views.LoginView.as_view(
+        template_name='registration/login.html',
+        authentication_form=EmailOrUsernameAuthenticationForm,
+    )
 )
 
 urlpatterns = [

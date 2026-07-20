@@ -84,6 +84,7 @@ def notify_admin_welcome(user, reset_link):
             f"Hi {name},\n\n"
             f"An admin account has been created for you on the EDAWN Business Builders portal.\n\n"
             f"Username: {user.username}\n\n"
+            f"After setting your password, you can sign in with either your email address or username.\n\n"
             f"Set your password and log in here:\n"
             f"{reset_link}\n\n"
             f"This link expires in 24 hours. If you have questions, contact kim.yaegar@edawn.org.\n\n"

@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 from .models import Assignment, AssignmentRequest, Company, ContactAttempt, InviteCode, Notice, Resource, VisitNote, Message, Reply
 
@@ -9,6 +10,21 @@ _fs = {'class': 'form-select'}
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------
+
+class EmailOrUsernameAuthenticationForm(AuthenticationForm):
+    username = forms.CharField(
+        label='Email or username',
+        widget=forms.TextInput(attrs={**_fc, 'autofocus': True}),
+    )
+
+    def clean(self):
+        username = self.cleaned_data.get('username')
+        if username and '@' in username:
+            matches = User.objects.filter(email__iexact=username.strip())
+            if matches.count() == 1:
+                self.cleaned_data['username'] = matches.first().get_username()
+        return super().clean()
+
 
 class RegisterForm(forms.Form):
     first_name  = forms.CharField(max_length=50, required=False,
