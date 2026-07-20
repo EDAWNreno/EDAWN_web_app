@@ -1,7 +1,7 @@
-# EDAWN Business Builders Portal — Staff Guide
+# Northern NV Now Business Builders Portal — Staff Guide
 
-**For:** Kim Yaeger, EDAWN Staff Administrator  
-**Last updated:** May 2026
+**For:** Kim Yaeger, Northern NV Now Staff Administrator  
+**Last updated:** July 2026
 
 ---
 
@@ -236,7 +236,7 @@ Click **Add Resource** (visible only to you as staff).
 
 - **Title** — what volunteers see (e.g. "Visit Script — Manufacturing")
 - **Description** — optional short explanation
-- **Category** — choose from: Visit Script, Company Snapshot Form, Workforce Guide, EDAWN Value Prop, or Other
+- **Category** — choose from: Visit Script, Company Snapshot Form, Workforce Guide, Northern NV Now Value Prop, or Other
 - **URL** — paste your OneDrive sharing link
 - **Sort order** — lower numbers appear first within their category (default 0)
 - **Active** — uncheck to hide without deleting
@@ -267,7 +267,7 @@ The CSV includes: company name, industry, city, volunteer name, visit date, hiri
 
 Go to **Staff → Expansion Signals**.
 
-This page surfaces companies whose most recent visit note indicated expansion activity — adding square footage, looking for a new building, adding equipment, or planning capital expenditure. It's a quick way to identify companies that may need follow-up from the EDAWN economic development team.
+This page surfaces companies whose most recent visit note indicated expansion activity — adding square footage, looking for a new building, adding equipment, or planning capital expenditure. It's a quick way to identify companies that may need follow-up from the Northern NV Now economic development team.
 
 ---
 
