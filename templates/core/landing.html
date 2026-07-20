@@ -57,11 +57,22 @@
 
     /* ── Hero ── */
     .hero {
-      background: #050505;
+      background:
+        linear-gradient(145deg, rgba(0,69,91,.98) 0%, rgba(0,69,91,.96) 42%, rgba(0,101,112,.92) 72%, rgba(237,118,38,.22) 100%),
+        linear-gradient(180deg, #003747 0%, #00455b 56%, #006570 100%);
       color: #fff;
       padding: 5rem 0 4rem;
       position: relative;
       overflow: hidden;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(120deg, transparent 0 54%, rgba(255,177,123,.18) 54% 66%, transparent 66%),
+        linear-gradient(180deg, rgba(255,255,255,.08) 0%, transparent 42%);
+      pointer-events: none;
     }
     .program-logo-hero {
       display: block;
