@@ -22,7 +22,7 @@
         <div class="alert alert-danger">
           <strong>This company cannot be removed yet.</strong>
           It is actively assigned to {{ active_assignment.volunteer.get_full_name|default:active_assignment.volunteer.username }}.
-          Resolve that assignment first so it does not disappear from the volunteer's workflow.
+          Resolve that assignment first so it does not disappear from the assignee's workflow.
         </div>
         <a href="{% url 'company_detail' active_assignment.pk %}" class="btn btn-outline-primary">Open Active Assignment</a>
         <a href="{% url 'staff_company_detail' company.pk %}" class="btn btn-outline-secondary">Cancel</a>

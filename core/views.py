@@ -362,8 +362,11 @@ def quick_assign(request):
             company   = form.cleaned_data['company']
             volunteer = form.cleaned_data['volunteer']
 
-            profile, _ = UserProfile.objects.get_or_create(user=volunteer)
-            if not profile.bbv_certified:
+            if not volunteer.is_staff:
+                profile, _ = UserProfile.objects.get_or_create(user=volunteer)
+            else:
+                profile = None
+            if profile is not None and not profile.bbv_certified:
                 active_count = Assignment.objects.filter(
                     volunteer=volunteer, status=Assignment.STATUS_ACTIVE
                 ).count()
@@ -553,7 +556,7 @@ def company_list(request):
             .values_list('industry', flat=True)
             .distinct().order_by('industry')
         )
-        volunteers = User.objects.filter(is_active=True, is_staff=False).order_by('first_name', 'last_name')
+        assignees = User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username')
     else:
         industries = (
             Assignment.objects.filter(volunteer=request.user)
@@ -561,7 +564,7 @@ def company_list(request):
             .values_list('company__industry', flat=True)
             .distinct().order_by('company__industry')
         )
-        volunteers = None
+        assignees = None
 
     context = {
         'assignments':          assignments.order_by('company__name'),
@@ -570,7 +573,7 @@ def company_list(request):
         'industry_filter':      industry_filter,
         'volunteer_filter':     volunteer_filter,
         'industries':           industries,
-        'volunteers':           volunteers,
+        'assignees':            assignees,
     }
     return render(request, 'core/company_list.html', context)
 
@@ -1620,10 +1623,10 @@ def staff_unassign_assignment(request, pk):
                 company.status = Company.STATUS_UNASSIGNED
                 company.save(update_fields=['status', 'updated_at'])
 
-        volunteer_name = assignment.volunteer.get_full_name() or assignment.volunteer.username
+        assignee_name = assignment.volunteer.get_full_name() or assignment.volunteer.username
         messages.success(
             request,
-            f'"{assignment.company.name}" was unassigned from {volunteer_name}. '
+            f'"{assignment.company.name}" was unassigned from {assignee_name}. '
             'The assignment history and notes were preserved.',
         )
         return redirect('staff_company_detail', pk=assignment.company_id)
@@ -1631,7 +1634,7 @@ def staff_unassign_assignment(request, pk):
     return render(request, 'core/staff_assignment_unassign_confirm.html', {
         'assignment': assignment,
         'company': assignment.company,
-        'volunteer_name': assignment.volunteer.get_full_name() or assignment.volunteer.username,
+        'assignee_name': assignment.volunteer.get_full_name() or assignment.volunteer.username,
         'attempt_count': assignment.contact_attempts.count(),
         'visit_count': assignment.visit_notes.count(),
     })

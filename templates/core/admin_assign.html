@@ -20,7 +20,7 @@
         <div class="alert alert-info py-2 px-3 small mb-3">
           <i class="bi bi-info-circle me-1"></i>
           Volunteers without BBV certification are limited to <strong>1 active company</strong> at a time.
-          BBV-certified volunteers can receive unlimited assignments.
+          BBV-certified volunteers and admins can receive unlimited assignments.
         </div>
         {% if form.company.field.queryset.exists %}
         <form method="post">
@@ -33,7 +33,7 @@
             {% endfor %}
           </div>
           <div class="mb-3">
-            <label class="form-label fw-semibold">Volunteer</label>
+            <label class="form-label fw-semibold">Assignee</label>
             {{ form.volunteer }}
             {% for error in form.volunteer.errors %}
             <div class="text-danger small mt-1">{{ error }}</div>
@@ -70,6 +70,7 @@
             <small class="text-muted">
               {% if a.company.industry %}<span class="badge bg-light text-secondary border me-1">{{ a.company.industry }}</span>{% endif %}
               <i class="bi bi-person"></i> {{ a.volunteer.get_full_name|default:a.volunteer.username }}
+              {% if a.volunteer.is_staff %}<span class="badge bg-secondary ms-1">Admin</span>{% endif %}
               &middot; {{ a.assigned_date|timesince }} ago
             </small>
           </li>

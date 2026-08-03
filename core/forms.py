@@ -321,7 +321,7 @@ class CompanyManagementForm(forms.ModelForm):
             )
         if not has_active_assignment and status == Company.STATUS_ASSIGNED:
             raise forms.ValidationError(
-                'Assign the company to a volunteer before setting its status to Assigned.'
+                'Assign the company to a volunteer or admin before setting its status to Assigned.'
             )
         return status
 
@@ -329,6 +329,13 @@ class CompanyManagementForm(forms.ModelForm):
 class _CompanyWithIndustryField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         return f"{obj.name} — {obj.industry}" if obj.industry else obj.name
+
+
+class _AssigneeChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        name = obj.get_full_name() or obj.username
+        role = 'Admin' if obj.is_staff else 'Volunteer'
+        return f'{name} ({role})'
 
 
 class QuickAssignForm(forms.Form):
@@ -340,10 +347,11 @@ class QuickAssignForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-select'}),
         empty_label='Select a company...',
     )
-    volunteer = forms.ModelChoiceField(
-        queryset=User.objects.filter(is_active=True, is_staff=False),
+    volunteer = _AssigneeChoiceField(
+        queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username'),
+        label='Assignee',
         widget=forms.Select(attrs={'class': 'form-select'}),
-        empty_label='Select a volunteer...',
+        empty_label='Select a volunteer or admin...',
     )
 
 

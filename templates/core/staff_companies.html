@@ -77,7 +77,7 @@
           <tr>
             <th>Company</th>
             <th>Status</th>
-            <th>Current Volunteer</th>
+            <th>Current Assignee</th>
             <th>Activity</th>
             <th class="text-end">Manage</th>
           </tr>
@@ -110,6 +110,7 @@
               {% with assignment=company.active_assignments.0 %}
                 {% if assignment %}
                 <div class="small fw-semibold">{{ assignment.volunteer.get_full_name|default:assignment.volunteer.username }}</div>
+                {% if assignment.volunteer.is_staff %}<span class="badge bg-secondary">Admin</span>{% endif %}
                 <div class="text-muted" style="font-size:.75rem;">since {{ assignment.assigned_date|date:"M j, Y" }}</div>
                 {% else %}<span class="text-muted">—</span>{% endif %}
               {% endwith %}

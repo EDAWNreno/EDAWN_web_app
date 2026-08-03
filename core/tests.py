@@ -348,6 +348,42 @@ class CompanyManagementTests(TestCase):
         self.assertContains(browse_list, self.company.name)
         self.assertContains(history_detail, 'Assignment Ended')
 
+    def test_staff_can_assign_company_to_an_admin_without_volunteer_cap(self):
+        assignee = User.objects.create_user(
+            username='assigned-admin',
+            password='test-pass',
+            is_staff=True,
+            first_name='Alex',
+        )
+        assignee.profile.bbv_certified = False
+        assignee.profile.save(update_fields=['bbv_certified'])
+        other_company = Company.objects.create(name='Already Assigned Company')
+        Assignment.objects.create(
+            company=other_company,
+            volunteer=assignee,
+            assigned_by=self.staff,
+        )
+        other_company.status = Company.STATUS_ASSIGNED
+        other_company.save(update_fields=['status'])
+        self.client.force_login(self.staff)
+
+        form_response = self.client.get(reverse('staff_assign'))
+        response = self.client.post(reverse('staff_assign'), {
+            'company': self.company.pk,
+            'volunteer': assignee.pk,
+        })
+
+        self.assertContains(form_response, 'Alex (Admin)')
+        self.assertRedirects(response, reverse('staff_assign'))
+        assignment = Assignment.objects.get(company=self.company)
+        self.assertEqual(assignment.volunteer, assignee)
+        self.assertEqual(assignment.status, Assignment.STATUS_ACTIVE)
+        self.company.refresh_from_db()
+        self.assertEqual(self.company.status, Company.STATUS_ASSIGNED)
+        company_list = self.client.get(reverse('company_list'))
+        self.assertContains(company_list, 'Acme Manufacturing')
+        self.assertContains(company_list, 'Alex (Admin)')
+
     def test_only_staff_can_unassign_and_only_when_assignment_is_active(self):
         assignment = Assignment.objects.create(
             company=self.company,

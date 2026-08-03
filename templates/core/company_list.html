@@ -42,8 +42,8 @@
         </a>
       </div>
 
-      <!-- Industry + Volunteer filters -->
-      {% if industries or volunteers %}
+      <!-- Industry + assignee filters -->
+      {% if industries or assignees %}
       <div class="d-flex gap-2 flex-wrap align-items-center ms-auto">
 
         {% if industries %}
@@ -60,16 +60,16 @@
         </form>
         {% endif %}
 
-        {% if volunteers %}
+        {% if assignees %}
         <form method="get" class="d-inline">
           <input type="hidden" name="status" value="{{ status_filter }}">
           {% if industry_filter %}<input type="hidden" name="industry" value="{{ industry_filter }}">{% endif %}
           <select name="volunteer" class="form-select form-select-sm" style="min-width:180px;"
                   onchange="this.form.submit()">
-            <option value="">All volunteers</option>
-            {% for vol in volunteers %}
+            <option value="">All assignees</option>
+            {% for vol in assignees %}
             <option value="{{ vol.pk }}" {% if volunteer_filter == vol.pk|stringformat:"s" %}selected{% endif %}>
-              {{ vol.get_full_name|default:vol.username }}
+              {{ vol.get_full_name|default:vol.username }}{% if vol.is_staff %} (Admin){% endif %}
             </option>
             {% endfor %}
           </select>
@@ -93,7 +93,7 @@
           <th>Company</th>
           <th>Location</th>
           <th>Industry</th>
-          {% if request.user.is_staff %}<th>Volunteer</th>{% endif %}
+          {% if request.user.is_staff %}<th>Assignee</th>{% endif %}
           <th class="text-center">Attempts</th>
           <th>Status</th>
           <th></th>
