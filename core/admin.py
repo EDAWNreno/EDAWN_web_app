@@ -321,7 +321,7 @@ class CompanyAdmin(admin.ModelAdmin):
                         'notes':                 'notes',
                     }
 
-                    created = updated = skipped = 0
+                    created = updated = restored = skipped = 0
                     row_errors = []
 
                     for i, row in enumerate(reader, start=2):
@@ -339,6 +339,16 @@ class CompanyAdmin(admin.ModelAdmin):
 
                         existing = Company.objects.filter(name__iexact=name).first()
                         if existing:
+                            if existing.is_archived:
+                                if overwrite:
+                                    for field, val in data.items():
+                                        setattr(existing, field, val)
+                                existing.is_archived = False
+                                existing.archived_at = None
+                                existing.archived_by = None
+                                existing.save()
+                                restored += 1
+                                continue
                             if overwrite:
                                 for field, val in data.items():
                                     setattr(existing, field, val)
@@ -351,7 +361,10 @@ class CompanyAdmin(admin.ModelAdmin):
                             Company.objects.create(**data)
                             created += 1
 
-                    summary = f"Import complete: {created} created, {updated} updated, {skipped} skipped."
+                    summary = (
+                        f"Import complete: {created} created, {updated} updated, "
+                        f"{restored} restored, {skipped} skipped."
+                    )
                     if row_errors:
                         summary += " Errors: " + "; ".join(row_errors[:5])
                     messages.success(request, summary)

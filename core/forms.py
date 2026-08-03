@@ -365,7 +365,10 @@ class CompanyCSVUploadForm(forms.Form):
         required=False,
         initial=False,
         label='Update existing companies by name',
-        help_text='If checked, companies with matching names will be updated rather than skipped.',
+        help_text=(
+            'Archived companies with matching names are restored automatically. '
+            'If checked, matching company details are also updated from the CSV.'
+        ),
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
     )
 

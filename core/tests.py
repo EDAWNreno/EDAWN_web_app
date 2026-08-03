@@ -1,7 +1,9 @@
 from django.contrib.auth.models import User
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from .emails import notify_invite
 from .models import Assignment, AssignmentRequest, Company, ContactAttempt, Message
@@ -230,6 +232,72 @@ class CompanyManagementTests(TestCase):
             response,
             reverse('staff_company_detail', args=[self.company.pk]),
         )
+        self.company.refresh_from_db()
+        self.assertFalse(self.company.is_archived)
+        self.assertIsNone(self.company.archived_at)
+        self.assertIsNone(self.company.archived_by)
+
+    def test_csv_import_restores_archived_company_without_overwriting_details(self):
+        self.company.is_archived = True
+        self.company.archived_at = timezone.now()
+        self.company.archived_by = self.staff
+        self.company.save(update_fields=['is_archived', 'archived_at', 'archived_by'])
+        self.client.force_login(self.staff)
+
+        response = self.client.post(reverse('staff_import_csv'), {
+            'csv_file': SimpleUploadedFile(
+                'companies.csv',
+                b'name,industry\nAcme Manufacturing,Technology\n',
+                content_type='text/csv',
+            ),
+        })
+
+        self.assertRedirects(response, reverse('staff_import_csv'))
+        self.company.refresh_from_db()
+        self.assertFalse(self.company.is_archived)
+        self.assertIsNone(self.company.archived_at)
+        self.assertIsNone(self.company.archived_by)
+        self.assertEqual(self.company.industry, 'Manufacturing')
+
+    def test_csv_import_restores_and_updates_archived_company_when_requested(self):
+        self.company.is_archived = True
+        self.company.archived_at = timezone.now()
+        self.company.archived_by = self.staff
+        self.company.save(update_fields=['is_archived', 'archived_at', 'archived_by'])
+        self.client.force_login(self.staff)
+
+        response = self.client.post(reverse('staff_import_csv'), {
+            'csv_file': SimpleUploadedFile(
+                'companies.csv',
+                b'name,industry\nAcme Manufacturing,Technology\n',
+                content_type='text/csv',
+            ),
+            'overwrite_existing': 'on',
+        })
+
+        self.assertRedirects(response, reverse('staff_import_csv'))
+        self.company.refresh_from_db()
+        self.assertFalse(self.company.is_archived)
+        self.assertEqual(self.company.industry, 'Technology')
+
+    def test_django_admin_csv_import_also_restores_archived_company(self):
+        self.staff.is_superuser = True
+        self.staff.save(update_fields=['is_superuser'])
+        self.company.is_archived = True
+        self.company.archived_at = timezone.now()
+        self.company.archived_by = self.staff
+        self.company.save(update_fields=['is_archived', 'archived_at', 'archived_by'])
+        self.client.force_login(self.staff)
+
+        response = self.client.post(reverse('admin:company-import-csv'), {
+            'csv_file': SimpleUploadedFile(
+                'companies.csv',
+                b'name\nAcme Manufacturing\n',
+                content_type='text/csv',
+            ),
+        })
+
+        self.assertRedirects(response, reverse('admin:core_company_changelist'))
         self.company.refresh_from_db()
         self.assertFalse(self.company.is_archived)
         self.assertIsNone(self.company.archived_at)
