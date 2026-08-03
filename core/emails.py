@@ -20,7 +20,7 @@ def notify_volunteer_inactivity(volunteer, active_assignments, days_since_visit)
             f"Log in to the portal to plan your next visit:\n"
             f"{_portal_url()}\n\n"
             f"Thanks for your work,\n"
-            f"EDAWN Business Builders"
+            f"Northern NV Now Business Builders"
         ),
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[volunteer.email],
@@ -41,7 +41,7 @@ def notify_staff_volunteer_overdue(volunteer, days_since_visit):
             f"in {days_since_visit} days.\n\n"
             f"Review their status on the volunteer roster:\n"
             f"{_portal_url('/staff/volunteers/')}\n\n"
-            f"— EDAWN Portal"
+            f"— Northern NV Now Business Builders Portal"
         ),
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=staff_emails,
@@ -67,7 +67,7 @@ def notify_staff_visit_submitted(visit_note):
             f"Employees: {visit_note.employee_count or 'Not recorded'}\n\n"
             f"View the full visit note:\n"
             f"{_portal_url(f'/companies/{visit_note.assignment.pk}/')}\n\n"
-            f"— EDAWN Portal"
+            f"— Northern NV Now Business Builders Portal"
         ),
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=staff_emails,
@@ -79,16 +79,16 @@ def notify_admin_welcome(user, reset_link):
     """Send a new admin their account details and a password-set link."""
     name = user.first_name or user.username
     send_mail(
-        subject='Your EDAWN Business Builders admin account is ready',
+        subject='Your Northern NV Now Business Builders admin account is ready',
         message=(
             f"Hi {name},\n\n"
-            f"An admin account has been created for you on the EDAWN Business Builders portal.\n\n"
+            f"An admin account has been created for you on the Northern NV Now Business Builders portal.\n\n"
             f"Username: {user.username}\n\n"
             f"After setting your password, you can sign in with either your email address or username.\n\n"
             f"Set your password and log in here:\n"
             f"{reset_link}\n\n"
-            f"This link expires in 24 hours. If you have questions, contact kim.yaegar@edawn.org.\n\n"
-            f"— EDAWN Business Builders"
+            f"This link expires in 24 hours. If you have questions, contact kim@northernnvnow.com.\n\n"
+            f"— Northern NV Now Business Builders"
         ),
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[user.email],
@@ -99,14 +99,14 @@ def notify_admin_welcome(user, reset_link):
 def notify_invite(email, invite_link):
     """Send a registration invite link directly to a prospective volunteer."""
     send_mail(
-        subject='You\'ve been invited to EDAWN Business Builders',
+        subject='You\'ve been invited to Northern NV Now Business Builders',
         message=(
-            f"You've been invited to join the EDAWN Business Builders volunteer portal.\n\n"
+            f"You've been invited to join the Northern NV Now Business Builders volunteer portal.\n\n"
             f"Click the link below to create your account:\n"
             f"{invite_link}\n\n"
             f"This link can only be used once. If you have any questions, "
-            f"contact kim.yaegar@edawn.org.\n\n"
-            f"— EDAWN Business Builders"
+            f"contact kim@northernnvnow.com.\n\n"
+            f"— Northern NV Now Business Builders"
         ),
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[email],
@@ -129,7 +129,7 @@ def notify_staff_private_message(message):
             f"Subject: {message.subject}\n\n"
             f"View and reply in the portal:\n"
             f"{_portal_url(f'/messages/{message.pk}/')}\n\n"
-            f"- EDAWN Business Builders"
+            f"- Northern NV Now Business Builders"
         ),
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=staff_emails,
@@ -151,7 +151,7 @@ def notify_volunteer_direct_message(message):
             f"Subject: {message.subject}\n\n"
             f"View and reply in the portal:\n"
             f"{_portal_url(f'/messages/{message.pk}/')}\n\n"
-            f"- EDAWN Business Builders"
+            f"- Northern NV Now Business Builders"
         ),
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[message.recipient.email],

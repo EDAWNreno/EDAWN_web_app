@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## About the Project
 
-EDAWN Business Builders Portal — a Django web app for managing volunteer outreach to businesses in Northern Nevada. Volunteers are assigned companies, log contact attempts and visits, and earn badges for milestones. Staff admins manage companies, assignments, volunteer accounts, and post notices to the volunteer dashboard.
+Northern NV Now Business Builders Portal — a Django web app for managing volunteer outreach to businesses in Northern Nevada. Volunteers are assigned companies, log contact attempts and visits, and earn badges for milestones. Staff admins manage companies, assignments, volunteer accounts, and post notices to the volunteer dashboard.
 
 ## Commands
 
@@ -17,6 +17,9 @@ SECRET_KEY=any-local-key python manage.py runserver
 
 # System check
 SECRET_KEY=any-local-key python manage.py check
+
+# Run tests
+SECRET_KEY=any-local-key python manage.py test
 
 # Apply migrations
 python manage.py migrate
@@ -34,7 +37,7 @@ python manage.py send_inactivity_reminders
 ./build.sh
 ```
 
-There are no tests — `core/tests.py` is empty.
+Tests live in `core/tests.py` and cover branding and message-notification flows.
 
 ## Environment Variables
 
@@ -49,7 +52,7 @@ There are no tests — `core/tests.py` is empty.
 | `CSRF_TRUSTED_ORIGINS` | — | Needed for HTTPS deployments |
 | `DJANGO_SUPERUSER_PASSWORD` | — | Triggers superuser creation in `build.sh` |
 | `RESEND_API_KEY` | — | Resend API key — emails are silently skipped if unset |
-| `DEFAULT_FROM_EMAIL` | `EDAWN Business Builders <noreply@edawn.org>` | From address for all outgoing email |
+| `DEFAULT_FROM_EMAIL` | `Northern NV Now Business Builders <noreply@northernnvnow.com>` | From address for all outgoing email |
 | `SITE_URL` | `http://localhost:8000` | Used in email links — set to the public Render URL in production |
 | `TRAINING_CALENDAR_URL` | Calendly link | Booking link shown on volunteer dashboard until training is marked complete |
 

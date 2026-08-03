@@ -178,7 +178,10 @@ EMAIL_PORT         = 587
 EMAIL_USE_TLS      = True
 EMAIL_HOST_USER    = 'resend'
 EMAIL_HOST_PASSWORD = os.environ.get('RESEND_API_KEY', '')
-DEFAULT_FROM_EMAIL  = os.environ.get('DEFAULT_FROM_EMAIL', 'EDAWN Business Builders <noreply@edawn.org>')
+DEFAULT_FROM_EMAIL  = os.environ.get(
+    'DEFAULT_FROM_EMAIL',
+    'Northern NV Now Business Builders <noreply@northernnvnow.com>',
+)
 
 # SMS — Twilio (optional; SMS is silently skipped if unset)
 # ---------------------------------------------------------------------------

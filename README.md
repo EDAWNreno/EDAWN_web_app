@@ -1,6 +1,6 @@
-# EDAWN Business Builders Portal
+# Northern NV Now Business Builders Portal
 
-A volunteer management web app for the Economic Development Authority of Western Nevada (EDAWN). Volunteers are assigned local businesses to visit and report on, earning badges as they hit milestones.
+A volunteer management web app for Northern NV Now's Business Builders program. Volunteers are assigned local businesses to visit and report on, earning badges as they hit milestones.
 
 ## Features
 
@@ -97,7 +97,7 @@ Visit `http://localhost:8000`. Log in with the superuser you created, or with a 
 | `CSRF_TRUSTED_ORIGINS` | No | Required for HTTPS deployments |
 | `DJANGO_SUPERUSER_PASSWORD` | No | Triggers superuser creation in `build.sh` |
 | `RESEND_API_KEY` | No | Enables transactional email; silently skipped if unset |
-| `DEFAULT_FROM_EMAIL` | No | Defaults to `EDAWN Business Builders <noreply@edawn.org>` |
+| `DEFAULT_FROM_EMAIL` | No | Defaults to `Northern NV Now Business Builders <noreply@northernnvnow.com>` |
 | `SITE_URL` | No | Public URL used in email links; defaults to `http://localhost:8000` |
 | `TRAINING_CALENDAR_URL` | No | Calendly booking link shown until training is marked complete |
 

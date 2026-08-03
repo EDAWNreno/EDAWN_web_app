@@ -3,7 +3,52 @@ from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from .emails import notify_invite
 from .models import Message
+
+
+@override_settings(
+    EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    SECURE_SSL_REDIRECT=False,
+)
+class BrandingTests(TestCase):
+    def test_password_reset_flow_uses_northern_nv_now_branding(self):
+        User.objects.create_user(
+            username='reset-user',
+            email='reset@example.com',
+            password='test-pass',
+        )
+
+        form_response = self.client.get(reverse('password_reset'))
+        self.assertContains(form_response, 'northern-nv-now-primary.svg')
+        self.assertContains(form_response, 'Reset Password – Northern NV Now')
+        self.assertNotContains(form_response, 'edawn-logo.svg')
+
+        response = self.client.post(reverse('password_reset'), {
+            'email': 'reset@example.com',
+        })
+
+        self.assertRedirects(response, reverse('password_reset_done'))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(
+            mail.outbox[0].subject,
+            'Reset your Northern NV Now Business Builders Portal password',
+        )
+        self.assertIn(
+            'Northern NV Now Business Builders Portal account',
+            mail.outbox[0].body,
+        )
+
+    def test_invite_email_uses_northern_nv_now_branding(self):
+        notify_invite('volunteer@example.com', 'https://portal.example.test/register/')
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(
+            mail.outbox[0].subject,
+            "You've been invited to Northern NV Now Business Builders",
+        )
+        self.assertIn('kim@northernnvnow.com', mail.outbox[0].body)
+        self.assertNotIn('EDAWN', mail.outbox[0].body)
 
 
 @override_settings(

@@ -356,7 +356,7 @@ class Resource(models.Model):
         ('visit_script',    'Visit Script'),
         ('snapshot_form',   'Company Snapshot Form'),
         ('workforce_guide', 'Workforce Guide'),
-        ('value_prop',      'EDAWN Value Prop'),
+        ('value_prop',      'Northern NV Now Value Prop'),
         ('other',           'Other'),
     ]
 

@@ -36,7 +36,7 @@ def notify_volunteer_inactivity_sms(volunteer, active_assignments, days_since_vi
     suffix = '...' if len(active_assignments) > 3 else ''
     send_sms(
         phone,
-        f"Hi {first_name}, it's been {days_since_visit} days since your last EDAWN visit. "
+        f"Hi {first_name}, it's been {days_since_visit} days since your last Business Builders visit. "
         f"Your active companies: {company_names}{suffix}. "
         f"Log in at {settings.SITE_URL} to plan your next visit."
     )
