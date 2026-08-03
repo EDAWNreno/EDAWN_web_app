@@ -258,7 +258,7 @@ def staff_company_detail(request, pk):
 
     assignments = (
         company.assignments
-        .select_related('volunteer', 'assigned_by')
+        .select_related('volunteer', 'assigned_by', 'unassigned_by')
         .annotate(
             attempt_count=Count('contact_attempts', distinct=True),
             visit_count=Count('visit_notes', distinct=True),
@@ -505,6 +505,7 @@ def company_list(request):
 
     if request.user.is_staff:
         base_qs = (Assignment.objects.filter(company__is_archived=False)
+                   .exclude(status=Assignment.STATUS_UNASSIGNED)
                    .select_related('company', 'volunteer')
                    .prefetch_related('contact_attempts'))
     else:
@@ -512,6 +513,7 @@ def company_list(request):
                        volunteer=request.user,
                        company__is_archived=False,
                    )
+                   .exclude(status=Assignment.STATUS_UNASSIGNED)
                    .select_related('company')
                    .prefetch_related('contact_attempts'))
 
@@ -959,6 +961,7 @@ def staff_dashboard(request):
         'recent_assignments': (
             Assignment.objects
             .filter(company__is_archived=False)
+            .exclude(status=Assignment.STATUS_UNASSIGNED)
             .select_related('company', 'volunteer')
             .order_by('-assigned_date')[:10]
         ),
@@ -1571,6 +1574,54 @@ def staff_reopen_assignment(request, pk):
     assignment.company.save(update_fields=['status'])
     messages.success(request, f'"{assignment.company.name}" has been reopened and assigned back to {assignment.volunteer.get_full_name() or assignment.volunteer.username}.')
     return redirect('company_detail', pk=pk)
+
+
+@staff_member_required
+def staff_unassign_assignment(request, pk):
+    assignment = get_object_or_404(
+        Assignment.objects.select_related('company', 'volunteer'),
+        pk=pk,
+    )
+
+    if request.method == 'POST':
+        with transaction.atomic():
+            assignment = get_object_or_404(
+                Assignment.objects.select_for_update().select_related('company', 'volunteer'),
+                pk=pk,
+            )
+            if assignment.status != Assignment.STATUS_ACTIVE:
+                messages.error(request, 'Only active assignments can be unassigned.')
+                return redirect('staff_company_detail', pk=assignment.company_id)
+
+            company = Company.objects.select_for_update().get(pk=assignment.company_id)
+            assignment.status = Assignment.STATUS_UNASSIGNED
+            assignment.unassigned_at = timezone.now()
+            assignment.unassigned_by = request.user
+            assignment.save(update_fields=['status', 'unassigned_at', 'unassigned_by'])
+
+            has_other_active_assignment = Assignment.objects.filter(
+                company=company,
+                status=Assignment.STATUS_ACTIVE,
+            ).exclude(pk=assignment.pk).exists()
+            if not has_other_active_assignment:
+                company.status = Company.STATUS_UNASSIGNED
+                company.save(update_fields=['status', 'updated_at'])
+
+        volunteer_name = assignment.volunteer.get_full_name() or assignment.volunteer.username
+        messages.success(
+            request,
+            f'"{assignment.company.name}" was unassigned from {volunteer_name}. '
+            'The assignment history and notes were preserved.',
+        )
+        return redirect('staff_company_detail', pk=assignment.company_id)
+
+    return render(request, 'core/staff_assignment_unassign_confirm.html', {
+        'assignment': assignment,
+        'company': assignment.company,
+        'volunteer_name': assignment.volunteer.get_full_name() or assignment.volunteer.username,
+        'attempt_count': assignment.contact_attempts.count(),
+        'visit_count': assignment.visit_notes.count(),
+    })
 
 
 @login_required

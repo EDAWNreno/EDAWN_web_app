@@ -43,6 +43,7 @@ urlpatterns = [
     path('staff/notices/<int:pk>/delete/', views.staff_notice_delete, name='staff_notice_delete'),
     path('staff/guide/',                   views.staff_guide,          name='staff_guide'),
     path('staff/assignments/<int:pk>/reopen/', views.staff_reopen_assignment, name='staff_reopen_assignment'),
+    path('staff/assignments/<int:pk>/unassign/', views.staff_unassign_assignment, name='staff_unassign_assignment'),
     path('volunteer-guide/',               views.volunteer_guide,      name='volunteer_guide'),
 
     # Resources

@@ -72,7 +72,7 @@ Tests live in `core/tests.py` and cover branding and message-notification flows.
 - `/companies/<id>/contact/`, `/companies/<id>/visit/` → volunteer workflows
 - `/badges/`, `/leaderboard/`, `/messages/`, `/resources/` → engagement and reference
 - `/staff/` → staff dashboard
-- `/staff/companies/` → searchable company management, history, editing, archive/restore
+- `/staff/companies/` → searchable company management, history, editing, unassign, archive/restore
 - `/staff/volunteers/` → volunteer roster with training/BBV/temp-password controls
 - `/staff/requests/` → approve or deny company assignment requests
 - `/staff/notices/` → create and manage notices shown on volunteer dashboards
@@ -95,7 +95,7 @@ The central entity is **Assignment** — it links a **Company** to a volunteer (
 - `VisitNote.save()` — auto-sets `assignment.status = COMPLETED`, `company.status = VISITED`, `assignment.completed_date = now()`, resets `profile.last_inactivity_notified`, and calls `check_and_award_badges(user)`.
 
 Company status flow: `unassigned → assigned → visited / lost`
-Assignment status flow: `active → completed / lost`
+Assignment status flow: `active → completed / lost / unassigned`
 
 **Supporting models:**
 
@@ -103,6 +103,7 @@ Assignment status flow: `active → completed / lost`
 - **Notice** — a staff-authored announcement displayed as an alert banner on all volunteer dashboards. Requires an `expires_at` datetime; disappears automatically after expiry.
 - **Resource** — a titled link (OneDrive or other URL) in a named category, visible to all volunteers on the Resources page. Staff manage these from the same page.
 - **Company archival** — staff removals set `Company.is_archived` and retain assignments, visits, attempts, and requests. Companies with active assignments cannot be archived; restoring clears the archive metadata.
+- **Assignment unassigning** — staff can end an active assignment without deleting it. The assignment records `unassigned_at`/`unassigned_by`, the company returns to `unassigned`, and prior attempts and notes remain available in company history.
 - **UserProfile** — one-to-one with User (created by post_save signal). Stores `bbv_certified`, `training_completed`, `last_inactivity_notified`.
 - **Badge / UserBadge** — milestone achievements. Auto-awarded by `check_and_award_badges(user)` on contact/visit save. `criteria_value = 0` means manual-award only.
 - **InviteCode** — single-use registration tokens. `RegisterForm` validates and consumes the code on save.

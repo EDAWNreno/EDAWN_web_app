@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Unassign {{ company.name }} – Northern NV Now{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-1">
+      <li class="breadcrumb-item"><a href="{% url 'staff_companies' %}">Company Management</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'staff_company_detail' company.pk %}">{{ company.name }}</a></li>
+      <li class="breadcrumb-item active">Unassign</li>
+    </ol>
+  </nav>
+  <h4 class="mb-0 fw-bold"><i class="bi bi-person-dash me-2"></i>Unassign {{ company.name }}?</h4>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card border-warning">
+      <div class="card-body p-4">
+        {% if assignment.status != 'active' %}
+        <div class="alert alert-danger mb-3">
+          This assignment is {{ assignment.get_status_display|lower }} and can no longer be unassigned.
+        </div>
+        <a href="{% url 'staff_company_detail' company.pk %}" class="btn btn-outline-secondary">Back to Company</a>
+        {% else %}
+        <p>
+          This will remove <strong>{{ company.name }}</strong> from
+          <strong>{{ volunteer_name }}</strong>'s active assignments and make the company available for reassignment.
+        </p>
+        <div class="bg-light rounded p-3 mb-4">
+          <div><strong>{{ attempt_count }}</strong> contact attempt{{ attempt_count|pluralize }}</div>
+          <div><strong>{{ visit_count }}</strong> visit note{{ visit_count|pluralize }}</div>
+        </div>
+        <div class="alert alert-info small">
+          Nothing will be deleted. The assignment, contact attempts, and notes will remain in company history.
+        </div>
+        <form method="post" class="d-flex gap-2">
+          {% csrf_token %}
+          <button class="btn btn-warning"><i class="bi bi-person-dash me-1"></i>Unassign Company</button>
+          <a href="{% url 'staff_company_detail' company.pk %}" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -236,8 +236,9 @@ class AssignmentInline(admin.TabularInline):
     model               = Assignment
     extra               = 1
     autocomplete_fields = ('volunteer',)
-    readonly_fields     = ('assigned_by', 'assigned_date', 'completed_date')
-    fields              = ('volunteer', 'status', 'assigned_by', 'assigned_date', 'completed_date')
+    readonly_fields     = ('assigned_by', 'assigned_date', 'completed_date', 'unassigned_at', 'unassigned_by')
+    fields              = ('volunteer', 'status', 'assigned_by', 'assigned_date', 'completed_date',
+                           'unassigned_at', 'unassigned_by')
     show_change_link    = True
 
 
@@ -375,12 +376,12 @@ class CompanyAdmin(admin.ModelAdmin):
 @admin.register(Assignment)
 class AssignmentAdmin(admin.ModelAdmin):
     list_display   = ('company', 'volunteer', 'assigned_by', 'status', 'assigned_date',
-                      'attempt_count', 'completed_date')
+                      'attempt_count', 'completed_date', 'unassigned_at')
     list_filter    = ('status', 'assigned_date')
     search_fields  = ('company__name', 'volunteer__username', 'volunteer__first_name',
                       'volunteer__last_name')
     autocomplete_fields = ('company', 'volunteer', 'assigned_by')
-    readonly_fields = ('assigned_date', 'completed_date')
+    readonly_fields = ('assigned_date', 'completed_date', 'unassigned_at', 'unassigned_by')
     ordering       = ('-assigned_date',)
     inlines        = [ContactAttemptInline, VisitNoteInline]
 

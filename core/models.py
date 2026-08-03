@@ -69,10 +69,12 @@ class Assignment(models.Model):
     STATUS_ACTIVE    = 'active'
     STATUS_COMPLETED = 'completed'
     STATUS_LOST      = 'lost'
+    STATUS_UNASSIGNED = 'unassigned'
     STATUS_CHOICES = [
         (STATUS_ACTIVE,    'Active'),
         (STATUS_COMPLETED, 'Completed'),
         (STATUS_LOST,      'Lost'),
+        (STATUS_UNASSIGNED, 'Unassigned'),
     ]
 
     company        = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='assignments')
@@ -82,6 +84,14 @@ class Assignment(models.Model):
     assigned_date  = models.DateTimeField(auto_now_add=True)
     status         = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE, db_index=True)
     completed_date = models.DateTimeField(null=True, blank=True)
+    unassigned_at  = models.DateTimeField(null=True, blank=True)
+    unassigned_by  = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assignments_unassigned',
+    )
 
     class Meta:
         ordering = ['-assigned_date']

@@ -18,6 +18,8 @@
       <span class="badge bg-success rounded-pill fs-6">Visited</span>
     {% elif assignment.status == 'lost' %}
       <span class="badge bg-danger rounded-pill fs-6">Lost</span>
+    {% elif assignment.status == 'unassigned' %}
+      <span class="badge bg-secondary rounded-pill fs-6">Unassigned</span>
     {% endif %}
   </div>
 </div>
@@ -159,6 +161,20 @@
             <i class="bi bi-arrow-counterclockwise me-1"></i>Reopen Assignment
           </button>
         </form>
+        {% endif %}
+      </div>
+    </div>
+    {% elif assignment.status == 'unassigned' %}
+    <div class="card border-secondary mb-4">
+      <div class="card-body text-center py-4">
+        <i class="bi bi-person-dash text-secondary fs-1"></i>
+        <div class="fw-bold mt-2">Assignment Ended</div>
+        <div class="text-muted small">
+          This company was unassigned
+          {% if assignment.unassigned_at %}on {{ assignment.unassigned_at|date:"M d, Y" }}{% endif %}.
+        </div>
+        {% if request.user.is_staff %}
+        <a href="{% url 'staff_company_detail' company.pk %}" class="btn btn-sm btn-outline-secondary mt-3">Open Company Management</a>
         {% endif %}
       </div>
     </div>

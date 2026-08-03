@@ -4,7 +4,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .emails import notify_invite
-from .models import Assignment, AssignmentRequest, Company, Message
+from .models import Assignment, AssignmentRequest, Company, ContactAttempt, Message
 
 
 @override_settings(
@@ -234,6 +234,81 @@ class CompanyManagementTests(TestCase):
         self.assertFalse(self.company.is_archived)
         self.assertIsNone(self.company.archived_at)
         self.assertIsNone(self.company.archived_by)
+
+    def test_staff_can_unassign_company_without_deleting_history(self):
+        assignment = Assignment.objects.create(
+            company=self.company,
+            volunteer=self.volunteer,
+            assigned_by=self.staff,
+        )
+        self.company.status = Company.STATUS_ASSIGNED
+        self.company.save(update_fields=['status'])
+        attempt = ContactAttempt.objects.create(
+            assignment=assignment,
+            attempted_by=self.volunteer,
+            method='phone',
+            notes='Left a voicemail.',
+        )
+        self.client.force_login(self.staff)
+
+        confirm_response = self.client.get(
+            reverse('staff_unassign_assignment', args=[assignment.pk]),
+        )
+        response = self.client.post(
+            reverse('staff_unassign_assignment', args=[assignment.pk]),
+        )
+
+        self.assertContains(confirm_response, 'Unassign Acme Manufacturing?')
+        self.assertContains(confirm_response, 'Nothing will be deleted.')
+        self.assertRedirects(
+            response,
+            reverse('staff_company_detail', args=[self.company.pk]),
+        )
+        assignment.refresh_from_db()
+        self.company.refresh_from_db()
+        self.assertEqual(assignment.status, Assignment.STATUS_UNASSIGNED)
+        self.assertEqual(assignment.unassigned_by, self.staff)
+        self.assertIsNotNone(assignment.unassigned_at)
+        self.assertEqual(self.company.status, Company.STATUS_UNASSIGNED)
+        self.assertTrue(ContactAttempt.objects.filter(pk=attempt.pk).exists())
+
+        self.client.force_login(self.volunteer)
+        active_list = self.client.get(reverse('company_list'))
+        browse_list = self.client.get(reverse('company_browse'))
+        history_detail = self.client.get(reverse('company_detail', args=[assignment.pk]))
+        self.assertNotContains(active_list, self.company.name)
+        self.assertContains(browse_list, self.company.name)
+        self.assertContains(history_detail, 'Assignment Ended')
+
+    def test_only_staff_can_unassign_and_only_when_assignment_is_active(self):
+        assignment = Assignment.objects.create(
+            company=self.company,
+            volunteer=self.volunteer,
+            assigned_by=self.staff,
+            status=Assignment.STATUS_COMPLETED,
+        )
+        self.company.status = Company.STATUS_VISITED
+        self.company.save(update_fields=['status'])
+
+        self.client.force_login(self.volunteer)
+        denied_response = self.client.post(
+            reverse('staff_unassign_assignment', args=[assignment.pk]),
+        )
+        self.assertEqual(denied_response.status_code, 302)
+        self.assertIn('/admin/login/', denied_response.url)
+
+        self.client.force_login(self.staff)
+        inactive_response = self.client.post(
+            reverse('staff_unassign_assignment', args=[assignment.pk]),
+        )
+        self.assertRedirects(
+            inactive_response,
+            reverse('staff_company_detail', args=[self.company.pk]),
+        )
+        assignment.refresh_from_db()
+        self.company.refresh_from_db()
+        self.assertEqual(assignment.status, Assignment.STATUS_COMPLETED)
+        self.assertEqual(self.company.status, Company.STATUS_VISITED)
 
 
 @override_settings(

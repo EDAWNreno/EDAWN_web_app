@@ -87,7 +87,12 @@
         {% if active_assignment %}
         <div class="fw-semibold">{{ active_assignment.volunteer.get_full_name|default:active_assignment.volunteer.username }}</div>
         <div class="text-muted small mb-3">Assigned {{ active_assignment.assigned_date|date:"M j, Y" }}</div>
-        <a href="{% url 'company_detail' active_assignment.pk %}" class="btn btn-sm btn-outline-primary">Open Assignment</a>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="{% url 'company_detail' active_assignment.pk %}" class="btn btn-sm btn-outline-primary">Open Assignment</a>
+          <a href="{% url 'staff_unassign_assignment' active_assignment.pk %}" class="btn btn-sm btn-outline-warning">
+            <i class="bi bi-person-dash me-1"></i>Unassign
+          </a>
+        </div>
         {% else %}
         <p class="text-muted small mb-3">No active assignment.</p>
         {% if not company.is_archived and company.status == 'unassigned' %}
@@ -132,7 +137,15 @@
           {% for assignment in assignments %}
           <tr>
             <td>{{ assignment.volunteer.get_full_name|default:assignment.volunteer.username }}</td>
-            <td>{{ assignment.get_status_display }}</td>
+            <td>
+              {{ assignment.get_status_display }}
+              {% if assignment.unassigned_at %}
+              <div class="text-muted" style="font-size:.75rem;">
+                {{ assignment.unassigned_at|date:"M j, Y" }}
+                {% if assignment.unassigned_by %}by {{ assignment.unassigned_by.get_full_name|default:assignment.unassigned_by.username }}{% endif %}
+              </div>
+              {% endif %}
+            </td>
             <td>{{ assignment.assigned_date|date:"M j, Y" }}</td>
             <td>{{ assignment.visit_count }}</td>
             <td>{{ assignment.attempt_count }}</td>
