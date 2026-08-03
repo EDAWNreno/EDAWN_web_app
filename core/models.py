@@ -33,6 +33,15 @@ class Company(models.Model):
     primary_contact_title = models.CharField(max_length=100, blank=True)
     notes                 = models.TextField(blank=True, help_text="Internal admin notes")
     status                = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_UNASSIGNED, db_index=True)
+    is_archived           = models.BooleanField(default=False, db_index=True)
+    archived_at           = models.DateTimeField(null=True, blank=True)
+    archived_by           = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='companies_archived',
+    )
     created_at            = models.DateTimeField(auto_now_add=True)
     updated_at            = models.DateTimeField(auto_now=True)
 

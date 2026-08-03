@@ -283,6 +283,49 @@ class QuickCompanyForm(forms.ModelForm):
         }
 
 
+class CompanyManagementForm(forms.ModelForm):
+    class Meta:
+        model = Company
+        fields = (
+            'name', 'status', 'industry', 'address', 'city', 'state', 'zip_code',
+            'phone', 'email', 'website', 'primary_contact_name',
+            'primary_contact_title', 'notes',
+        )
+        widgets = {
+            'name':                  forms.TextInput(attrs=_fc),
+            'status':                forms.Select(attrs={'class': 'form-select'}),
+            'industry':              forms.TextInput(attrs=_fc),
+            'address':               forms.TextInput(attrs=_fc),
+            'city':                  forms.TextInput(attrs=_fc),
+            'state':                 forms.TextInput(attrs=_fc),
+            'zip_code':              forms.TextInput(attrs=_fc),
+            'phone':                 forms.TextInput(attrs=_fc),
+            'email':                 forms.EmailInput(attrs=_fc),
+            'website':               forms.URLInput(attrs=_fc),
+            'primary_contact_name':  forms.TextInput(attrs=_fc),
+            'primary_contact_title': forms.TextInput(attrs=_fc),
+            'notes':                 forms.Textarea(attrs={**_fc, 'rows': 5}),
+        }
+
+    def clean_status(self):
+        status = self.cleaned_data['status']
+        if not self.instance.pk:
+            return status
+
+        has_active_assignment = self.instance.assignments.filter(
+            status=Assignment.STATUS_ACTIVE,
+        ).exists()
+        if has_active_assignment and status != Company.STATUS_ASSIGNED:
+            raise forms.ValidationError(
+                'This company has an active assignment, so its status must remain Assigned.'
+            )
+        if not has_active_assignment and status == Company.STATUS_ASSIGNED:
+            raise forms.ValidationError(
+                'Assign the company to a volunteer before setting its status to Assigned.'
+            )
+        return status
+
+
 class _CompanyWithIndustryField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         return f"{obj.name} — {obj.industry}" if obj.industry else obj.name
@@ -290,7 +333,10 @@ class _CompanyWithIndustryField(forms.ModelChoiceField):
 
 class QuickAssignForm(forms.Form):
     company = _CompanyWithIndustryField(
-        queryset=Company.objects.filter(status=Company.STATUS_UNASSIGNED).order_by('industry', 'name'),
+        queryset=Company.objects.filter(
+            status=Company.STATUS_UNASSIGNED,
+            is_archived=False,
+        ).order_by('industry', 'name'),
         widget=forms.Select(attrs={'class': 'form-select'}),
         empty_label='Select a company...',
     )

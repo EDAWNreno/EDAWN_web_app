@@ -12,7 +12,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.models import User
 from django.contrib import messages
-from django.db.models import Count, Max, Min, Q
+from django.db import transaction
+from django.db.models import Count, Max, Min, Prefetch, Q
 from django.utils import timezone
 from django.utils.html import format_html
 
@@ -28,7 +29,8 @@ from .emails import (
 from .models import Assignment, AssignmentRequest, Badge, Company, ContactAttempt, InviteCode, Message, Notice, Reply, Resource, UserBadge, UserProfile, VisitNote
 from .forms import (RegisterForm, AccountForm, ContactAttemptForm, VisitNoteForm, CompanyContactUpdateForm,
                      MessageForm, ReplyForm, QuickCompanyForm, QuickAssignForm, InviteAdminForm,
-                     CompanyCSVUploadForm, VisitExportForm, NoticeForm, ResourceForm)
+                     CompanyCSVUploadForm, CompanyManagementForm, VisitExportForm, NoticeForm,
+                     ResourceForm)
 from .ratelimit import ratelimit
 
 
@@ -104,7 +106,11 @@ def dashboard(request):
     user = request.user
     active_assignments = (
         Assignment.objects
-        .filter(volunteer=user, status=Assignment.STATUS_ACTIVE)
+        .filter(
+            volunteer=user,
+            status=Assignment.STATUS_ACTIVE,
+            company__is_archived=False,
+        )
         .select_related('company')
         .order_by('company__name')
     )
@@ -130,14 +136,25 @@ def dashboard(request):
         'total_badges':    Badge.objects.count(),
         'top_users':       _leaderboard_qs()[:5],
         'recent_messages': recent_messages,
-        'total_assigned':  Assignment.objects.filter(volunteer=user).count(),
-        'completed_count': Assignment.objects.filter(volunteer=user, status=Assignment.STATUS_COMPLETED).count(),
-        'lost_count':      Assignment.objects.filter(volunteer=user, status=Assignment.STATUS_LOST).count(),
+        'total_assigned':  Assignment.objects.filter(volunteer=user, company__is_archived=False).count(),
+        'completed_count': Assignment.objects.filter(
+            volunteer=user,
+            status=Assignment.STATUS_COMPLETED,
+            company__is_archived=False,
+        ).count(),
+        'lost_count': Assignment.objects.filter(
+            volunteer=user,
+            status=Assignment.STATUS_LOST,
+            company__is_archived=False,
+        ).count(),
         'open_count':      active_assignments.count(),
     }
 
     if user.is_staff:
-        context['unassigned_count'] = Company.objects.filter(status=Company.STATUS_UNASSIGNED).count()
+        context['unassigned_count'] = Company.objects.filter(
+            status=Company.STATUS_UNASSIGNED,
+            is_archived=False,
+        ).count()
 
     profile = getattr(user, 'profile', None)
     if profile and not profile.training_completed and settings.TRAINING_CALENDAR_URL:
@@ -162,8 +179,179 @@ def quick_add_company(request):
             return redirect('staff_add_company')
     else:
         form = QuickCompanyForm()
-    recent = Company.objects.order_by('-created_at')[:5]
+    recent = Company.objects.filter(is_archived=False).order_by('-created_at')[:5]
     return render(request, 'core/admin_add_company.html', {'form': form, 'recent': recent})
+
+
+@staff_member_required
+def staff_companies(request):
+    search = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', 'all')
+    archive_filter = request.GET.get('archive', 'active')
+
+    companies = (
+        Company.objects
+        .select_related('archived_by')
+        .prefetch_related(Prefetch(
+            'assignments',
+            queryset=Assignment.objects.filter(
+                status=Assignment.STATUS_ACTIVE,
+            ).select_related('volunteer'),
+            to_attr='active_assignments',
+        ))
+        .annotate(
+            assignment_count=Count('assignments', distinct=True),
+            visit_count=Count('assignments__visit_notes', distinct=True),
+            last_visit=Max('assignments__visit_notes__visit_date'),
+        )
+    )
+
+    if archive_filter == 'archived':
+        companies = companies.filter(is_archived=True)
+    elif archive_filter != 'all':
+        companies = companies.filter(is_archived=False)
+
+    valid_statuses = {value for value, _ in Company.STATUS_CHOICES}
+    if status_filter in valid_statuses:
+        companies = companies.filter(status=status_filter)
+
+    if search:
+        companies = companies.filter(
+            Q(name__icontains=search)
+            | Q(industry__icontains=search)
+            | Q(city__icontains=search)
+            | Q(primary_contact_name__icontains=search)
+        )
+
+    counts = Company.objects.aggregate(
+        active_total=Count('pk', filter=Q(is_archived=False)),
+        archived_total=Count('pk', filter=Q(is_archived=True)),
+        unassigned_total=Count(
+            'pk',
+            filter=Q(is_archived=False, status=Company.STATUS_UNASSIGNED),
+        ),
+    )
+    return render(request, 'core/staff_companies.html', {
+        'companies': companies.order_by('name'),
+        'search': search,
+        'status_filter': status_filter,
+        'archive_filter': archive_filter,
+        'status_choices': Company.STATUS_CHOICES,
+        **counts,
+    })
+
+
+@staff_member_required
+def staff_company_detail(request, pk):
+    company = get_object_or_404(
+        Company.objects.select_related('archived_by'),
+        pk=pk,
+    )
+    if request.method == 'POST':
+        form = CompanyManagementForm(request.POST, instance=company)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Changes to "{company.name}" saved.')
+            return redirect('staff_company_detail', pk=company.pk)
+    else:
+        form = CompanyManagementForm(instance=company)
+
+    assignments = (
+        company.assignments
+        .select_related('volunteer', 'assigned_by')
+        .annotate(
+            attempt_count=Count('contact_attempts', distinct=True),
+            visit_count=Count('visit_notes', distinct=True),
+        )
+        .order_by('-assigned_date')
+    )
+    visit_notes = (
+        VisitNote.objects
+        .filter(assignment__company=company)
+        .select_related('assignment', 'visited_by')
+        .order_by('-visit_date')
+    )
+    contact_attempts = (
+        ContactAttempt.objects
+        .filter(assignment__company=company)
+        .select_related('assignment', 'attempted_by')
+        .order_by('-attempt_date')
+    )
+    pending_requests = (
+        company.assignment_requests
+        .filter(status=AssignmentRequest.STATUS_PENDING)
+        .select_related('volunteer')
+        .order_by('created_at')
+    )
+    return render(request, 'core/staff_company_detail.html', {
+        'company': company,
+        'form': form,
+        'assignments': assignments,
+        'visit_notes': visit_notes,
+        'contact_attempts': contact_attempts,
+        'pending_requests': pending_requests,
+        'active_assignment': company.active_assignment,
+    })
+
+
+@staff_member_required
+def staff_company_archive(request, pk):
+    company = get_object_or_404(Company, pk=pk)
+    active_assignment = company.active_assignment
+
+    if request.method == 'POST':
+        if company.is_archived:
+            messages.info(request, f'"{company.name}" is already archived.')
+            return redirect('staff_company_detail', pk=company.pk)
+        if active_assignment:
+            messages.error(
+                request,
+                'This company has an active assignment and cannot be archived. '
+                'Resolve the assignment first.',
+            )
+            return redirect('staff_company_detail', pk=company.pk)
+
+        with transaction.atomic():
+            denied_requests = company.assignment_requests.filter(
+                status=AssignmentRequest.STATUS_PENDING,
+            ).update(status=AssignmentRequest.STATUS_DENIED)
+            company.is_archived = True
+            company.archived_at = timezone.now()
+            company.archived_by = request.user
+            company.save(update_fields=['is_archived', 'archived_at', 'archived_by', 'updated_at'])
+
+        detail = ''
+        if denied_requests:
+            detail = f' {denied_requests} pending request(s) were denied.'
+        messages.success(
+            request,
+            f'"{company.name}" was removed from active company lists and archived.{detail}',
+        )
+        return redirect('staff_companies')
+
+    return render(request, 'core/staff_company_archive_confirm.html', {
+        'company': company,
+        'active_assignment': active_assignment,
+        'assignment_count': company.assignments.count(),
+        'visit_count': VisitNote.objects.filter(assignment__company=company).count(),
+        'attempt_count': ContactAttempt.objects.filter(assignment__company=company).count(),
+        'pending_request_count': company.assignment_requests.filter(
+            status=AssignmentRequest.STATUS_PENDING,
+        ).count(),
+    })
+
+
+@staff_member_required
+def staff_company_restore(request, pk):
+    if request.method != 'POST':
+        return redirect('staff_company_detail', pk=pk)
+    company = get_object_or_404(Company, pk=pk, is_archived=True)
+    company.is_archived = False
+    company.archived_at = None
+    company.archived_by = None
+    company.save(update_fields=['is_archived', 'archived_at', 'archived_by', 'updated_at'])
+    messages.success(request, f'"{company.name}" was restored to active company lists.')
+    return redirect('staff_company_detail', pk=company.pk)
 
 
 @staff_member_required
@@ -316,11 +504,14 @@ def company_list(request):
     volunteer_filter = request.GET.get('volunteer', '') if request.user.is_staff else ''
 
     if request.user.is_staff:
-        base_qs = (Assignment.objects.all()
+        base_qs = (Assignment.objects.filter(company__is_archived=False)
                    .select_related('company', 'volunteer')
                    .prefetch_related('contact_attempts'))
     else:
-        base_qs = (Assignment.objects.filter(volunteer=request.user)
+        base_qs = (Assignment.objects.filter(
+                       volunteer=request.user,
+                       company__is_archived=False,
+                   )
                    .select_related('company')
                    .prefetch_related('contact_attempts'))
 
@@ -345,7 +536,10 @@ def company_list(request):
     # Unassigned companies — staff only, shown for 'all' and 'unassigned' filters
     unassigned_companies = None
     if request.user.is_staff and status_filter in ('all', 'unassigned'):
-        uq = Company.objects.filter(status=Company.STATUS_UNASSIGNED)
+        uq = Company.objects.filter(
+            status=Company.STATUS_UNASSIGNED,
+            is_archived=False,
+        )
         if industry_filter:
             uq = uq.filter(industry=industry_filter)
         unassigned_companies = uq.order_by('name')
@@ -353,7 +547,7 @@ def company_list(request):
     # Industry options
     if request.user.is_staff:
         industries = (
-            Company.objects.exclude(industry='')
+            Company.objects.filter(is_archived=False).exclude(industry='')
             .values_list('industry', flat=True)
             .distinct().order_by('industry')
         )
@@ -714,7 +908,7 @@ def staff_dashboard(request):
 
     not_visited_60d = (
         Assignment.objects
-        .filter(status=Assignment.STATUS_ACTIVE)
+        .filter(status=Assignment.STATUS_ACTIVE, company__is_archived=False)
         .annotate(last_visit=Max('visit_notes__visit_date'))
         .filter(Q(last_visit__lt=cutoff_60) | Q(last_visit__isnull=True))
         .count()
@@ -722,7 +916,12 @@ def staff_dashboard(request):
 
     overdue_volunteers = list(
         User.objects
-        .filter(is_active=True, is_staff=False, assignments__status=Assignment.STATUS_ACTIVE)
+        .filter(
+            is_active=True,
+            is_staff=False,
+            assignments__status=Assignment.STATUS_ACTIVE,
+            assignments__company__is_archived=False,
+        )
         .annotate(
             last_visit=Max('assignments__visit_notes__visit_date'),
             oldest_active=Min('assignments__assigned_date',
@@ -738,10 +937,19 @@ def staff_dashboard(request):
     )
 
     context = {
-        'total_companies':    Company.objects.count(),
-        'unassigned_count':   Company.objects.filter(status=Company.STATUS_UNASSIGNED).count(),
-        'active_count':       Assignment.objects.filter(status=Assignment.STATUS_ACTIVE).count(),
-        'visited_count':      Company.objects.filter(status=Company.STATUS_VISITED).count(),
+        'total_companies':    Company.objects.filter(is_archived=False).count(),
+        'unassigned_count':   Company.objects.filter(
+            status=Company.STATUS_UNASSIGNED,
+            is_archived=False,
+        ).count(),
+        'active_count': Assignment.objects.filter(
+            status=Assignment.STATUS_ACTIVE,
+            company__is_archived=False,
+        ).count(),
+        'visited_count': Company.objects.filter(
+            status=Company.STATUS_VISITED,
+            is_archived=False,
+        ).count(),
         'total_volunteers':   User.objects.filter(is_active=True, is_staff=False).count(),
         'not_visited_60d':    not_visited_60d,
         'overdue_count':      len(overdue_volunteers),
@@ -750,6 +958,7 @@ def staff_dashboard(request):
         'pending_requests_count': AssignmentRequest.objects.filter(status=AssignmentRequest.STATUS_PENDING).count(),
         'recent_assignments': (
             Assignment.objects
+            .filter(company__is_archived=False)
             .select_related('company', 'volunteer')
             .order_by('-assigned_date')[:10]
         ),
@@ -874,7 +1083,7 @@ def staff_import_csv(request):
     else:
         form = CompanyCSVUploadForm()
 
-    recent = Company.objects.order_by('-created_at')[:10]
+    recent = Company.objects.filter(is_archived=False).order_by('-created_at')[:10]
     return render(request, 'core/staff_import.html', {'form': form, 'recent': recent})
 
 
@@ -1133,7 +1342,10 @@ REQUEST_LIMIT = 3
 @login_required
 def company_browse(request):
     companies = (
-        Company.objects.filter(status=Company.STATUS_UNASSIGNED)
+        Company.objects.filter(
+            status=Company.STATUS_UNASSIGNED,
+            is_archived=False,
+        )
         .annotate(pending_requests=Count(
             'assignment_requests',
             filter=Q(assignment_requests__status=AssignmentRequest.STATUS_PENDING),
@@ -1147,7 +1359,10 @@ def company_browse(request):
         companies = companies.filter(industry=industry_filter)
 
     industries = (
-        Company.objects.filter(status=Company.STATUS_UNASSIGNED)
+        Company.objects.filter(
+            status=Company.STATUS_UNASSIGNED,
+            is_archived=False,
+        )
         .exclude(industry='').values_list('industry', flat=True)
         .distinct().order_by('industry')
     )
@@ -1182,7 +1397,12 @@ def toggle_assignment_request(request, pk):
     if request.method != 'POST':
         return redirect('company_browse')
 
-    company = get_object_or_404(Company, pk=pk, status=Company.STATUS_UNASSIGNED)
+    company = get_object_or_404(
+        Company,
+        pk=pk,
+        status=Company.STATUS_UNASSIGNED,
+        is_archived=False,
+    )
     existing = AssignmentRequest.objects.filter(
         volunteer=request.user, company=company
     ).first()
@@ -1240,7 +1460,12 @@ def staff_requests(request):
 def staff_approve_request(request, pk):
     if request.method != 'POST':
         return redirect('staff_requests')
-    req = get_object_or_404(AssignmentRequest, pk=pk, status=AssignmentRequest.STATUS_PENDING)
+    req = get_object_or_404(
+        AssignmentRequest,
+        pk=pk,
+        status=AssignmentRequest.STATUS_PENDING,
+        company__is_archived=False,
+    )
 
     # Enforce BBV cap
     profile, _ = UserProfile.objects.get_or_create(user=req.volunteer)

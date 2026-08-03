@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Remove {{ company.name }} – Northern NV Now{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-1">
+      <li class="breadcrumb-item"><a href="{% url 'staff_companies' %}">Company Management</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'staff_company_detail' company.pk %}">{{ company.name }}</a></li>
+      <li class="breadcrumb-item active">Remove</li>
+    </ol>
+  </nav>
+  <h4 class="mb-0 fw-bold"><i class="bi bi-archive me-2"></i>Remove {{ company.name }}?</h4>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card border-danger">
+      <div class="card-body p-4">
+        {% if active_assignment %}
+        <div class="alert alert-danger">
+          <strong>This company cannot be removed yet.</strong>
+          It is actively assigned to {{ active_assignment.volunteer.get_full_name|default:active_assignment.volunteer.username }}.
+          Resolve that assignment first so it does not disappear from the volunteer's workflow.
+        </div>
+        <a href="{% url 'company_detail' active_assignment.pk %}" class="btn btn-outline-primary">Open Active Assignment</a>
+        <a href="{% url 'staff_company_detail' company.pk %}" class="btn btn-outline-secondary">Cancel</a>
+        {% else %}
+        <p>Removing this company archives it. The company will disappear from normal company, assignment, and browse lists, but its historical records will be retained.</p>
+        <div class="bg-light rounded p-3 mb-4">
+          <div><strong>{{ assignment_count }}</strong> assignment{{ assignment_count|pluralize }}</div>
+          <div><strong>{{ visit_count }}</strong> visit note{{ visit_count|pluralize }}</div>
+          <div><strong>{{ attempt_count }}</strong> contact attempt{{ attempt_count|pluralize }}</div>
+          <div><strong>{{ pending_request_count }}</strong> pending request{{ pending_request_count|pluralize }}</div>
+        </div>
+        {% if pending_request_count %}
+        <div class="alert alert-warning small">Pending assignment requests will be marked denied when the company is archived.</div>
+        {% endif %}
+        <form method="post" class="d-flex gap-2">
+          {% csrf_token %}
+          <button class="btn btn-danger"><i class="bi bi-archive me-1"></i>Remove and Archive</button>
+          <a href="{% url 'staff_company_detail' company.pk %}" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

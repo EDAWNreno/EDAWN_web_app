@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Company Management – Northern NV Now{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h4 class="mb-1 fw-bold"><i class="bi bi-buildings me-2"></i>Company Management</h4>
+    <p class="text-muted small mb-0">Review status, history, notes, and company details.</p>
+  </div>
+  <a href="{% url 'staff_add_company' %}" class="btn btn-primary">
+    <i class="bi bi-building-add me-1"></i>Add Company
+  </a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="card h-100"><div class="card-body py-3">
+      <div class="text-muted small">Active Companies</div>
+      <div class="fs-3 fw-bold" style="color:var(--brand-deep);">{{ active_total }}</div>
+    </div></div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card h-100"><div class="card-body py-3">
+      <div class="text-muted small">Unassigned</div>
+      <div class="fs-3 fw-bold" style="color:var(--brand-orange);">{{ unassigned_total }}</div>
+    </div></div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card h-100"><div class="card-body py-3">
+      <div class="text-muted small">Archived</div>
+      <div class="fs-3 fw-bold text-secondary">{{ archived_total }}</div>
+    </div></div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-lg-5">
+        <label for="company-search" class="form-label small fw-semibold">Search</label>
+        <input id="company-search" type="search" name="q" value="{{ search }}" class="form-control"
+               placeholder="Company, industry, city, or contact">
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <label for="status-filter" class="form-label small fw-semibold">Status</label>
+        <select id="status-filter" name="status" class="form-select">
+          <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All statuses</option>
+          {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-6 col-lg-2">
+        <label for="archive-filter" class="form-label small fw-semibold">Records</label>
+        <select id="archive-filter" name="archive" class="form-select">
+          <option value="active" {% if archive_filter == 'active' %}selected{% endif %}>Active only</option>
+          <option value="archived" {% if archive_filter == 'archived' %}selected{% endif %}>Archived only</option>
+          <option value="all" {% if archive_filter == 'all' %}selected{% endif %}>All records</option>
+        </select>
+      </div>
+      <div class="col-lg-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-grow-1">Filter</button>
+        <a href="{% url 'staff_companies' %}" class="btn btn-outline-secondary" aria-label="Clear filters">
+          <i class="bi bi-x-lg"></i>
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Company</th>
+            <th>Status</th>
+            <th>Current Volunteer</th>
+            <th>Activity</th>
+            <th class="text-end">Manage</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for company in companies %}
+          <tr class="{% if company.is_archived %}table-secondary{% endif %}">
+            <td>
+              <a href="{% url 'staff_company_detail' company.pk %}" class="fw-semibold text-decoration-none">
+                {{ company.name }}
+              </a>
+              {% if company.is_archived %}<span class="badge bg-secondary ms-1">Archived</span>{% endif %}
+              <div class="text-muted small">
+                {{ company.industry|default:"No industry" }}
+                {% if company.city %}&middot; {{ company.city }}{% endif %}
+              </div>
+            </td>
+            <td>
+              {% if company.status == 'unassigned' %}
+              <span class="badge bg-secondary rounded-pill">Unassigned</span>
+              {% elif company.status == 'assigned' %}
+              <span class="badge rounded-pill" style="background:var(--brand-orange);">Assigned</span>
+              {% elif company.status == 'visited' %}
+              <span class="badge bg-success rounded-pill">Visited</span>
+              {% else %}
+              <span class="badge bg-danger rounded-pill">Lost</span>
+              {% endif %}
+            </td>
+            <td>
+              {% with assignment=company.active_assignments.0 %}
+                {% if assignment %}
+                <div class="small fw-semibold">{{ assignment.volunteer.get_full_name|default:assignment.volunteer.username }}</div>
+                <div class="text-muted" style="font-size:.75rem;">since {{ assignment.assigned_date|date:"M j, Y" }}</div>
+                {% else %}<span class="text-muted">—</span>{% endif %}
+              {% endwith %}
+            </td>
+            <td class="small">
+              <div>{{ company.visit_count }} visit{{ company.visit_count|pluralize }}</div>
+              <div class="text-muted">
+                {% if company.last_visit %}Last {{ company.last_visit|date:"M j, Y" }}{% else %}No visits{% endif %}
+                &middot; {{ company.assignment_count }} assignment{{ company.assignment_count|pluralize }}
+              </div>
+            </td>
+            <td class="text-end">
+              <a href="{% url 'staff_company_detail' company.pk %}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil-square me-1"></i>Open
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center text-muted py-5">
+            <i class="bi bi-buildings fs-2 d-block mb-2"></i>No companies match these filters.
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

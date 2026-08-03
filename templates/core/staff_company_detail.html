@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}{{ company.name }} – Company Management{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-1">
+      <li class="breadcrumb-item"><a href="{% url 'staff_companies' %}">Company Management</a></li>
+      <li class="breadcrumb-item active">{{ company.name }}</li>
+    </ol>
+  </nav>
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+      <h4 class="mb-1 fw-bold">{{ company.name }}</h4>
+      <span class="text-muted small">Updated {{ company.updated_at|date:"M j, Y g:i A" }}</span>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+      {% if company.is_archived %}<span class="badge bg-secondary fs-6">Archived</span>{% endif %}
+      <span class="badge fs-6 {% if company.status == 'visited' %}bg-success{% elif company.status == 'lost' %}bg-danger{% elif company.status == 'unassigned' %}bg-secondary{% endif %}"
+            {% if company.status == 'assigned' %}style="background:var(--brand-orange);"{% endif %}>
+        {{ company.get_status_display }}
+      </span>
+    </div>
+  </div>
+</div>
+
+{% if company.is_archived %}
+<div class="alert alert-secondary d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <div>
+    <strong>This company is archived.</strong>
+    It is hidden from operational company lists.
+    {% if company.archived_at %}Archived {{ company.archived_at|date:"M j, Y" }}{% endif %}
+    {% if company.archived_by %}by {{ company.archived_by.get_full_name|default:company.archived_by.username }}{% endif %}.
+  </div>
+  <form method="post" action="{% url 'staff_company_restore' company.pk %}">
+    {% csrf_token %}
+    <button class="btn btn-outline-secondary"><i class="bi bi-arrow-counterclockwise me-1"></i>Restore</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="row g-4 mb-4">
+  <div class="col-xl-8">
+    <div class="card">
+      <div class="card-header py-3"><i class="bi bi-pencil-square me-2"></i>Company Details</div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label fw-semibold">Company Name</label>{{ form.name }}
+              {% for error in form.name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Status</label>{{ form.status }}
+              {% for error in form.status.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6"><label class="form-label fw-semibold">Industry</label>{{ form.industry }}</div>
+            <div class="col-md-6"><label class="form-label fw-semibold">Website</label>{{ form.website }}</div>
+            <div class="col-12"><label class="form-label fw-semibold">Street Address</label>{{ form.address }}</div>
+            <div class="col-md-5"><label class="form-label fw-semibold">City</label>{{ form.city }}</div>
+            <div class="col-md-3"><label class="form-label fw-semibold">State</label>{{ form.state }}</div>
+            <div class="col-md-4"><label class="form-label fw-semibold">ZIP Code</label>{{ form.zip_code }}</div>
+            <div class="col-md-6"><label class="form-label fw-semibold">Phone</label>{{ form.phone }}</div>
+            <div class="col-md-6"><label class="form-label fw-semibold">Email</label>{{ form.email }}</div>
+            <div class="col-md-6"><label class="form-label fw-semibold">Primary Contact</label>{{ form.primary_contact_name }}</div>
+            <div class="col-md-6"><label class="form-label fw-semibold">Contact Title</label>{{ form.primary_contact_title }}</div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Internal Admin Notes</label>{{ form.notes }}
+              <div class="form-text">Visible to staff on this management page.</div>
+            </div>
+          </div>
+          <div class="mt-4">
+            <button class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="card mb-4">
+      <div class="card-header py-3"><i class="bi bi-person-check me-2"></i>Current Assignment</div>
+      <div class="card-body">
+        {% if active_assignment %}
+        <div class="fw-semibold">{{ active_assignment.volunteer.get_full_name|default:active_assignment.volunteer.username }}</div>
+        <div class="text-muted small mb-3">Assigned {{ active_assignment.assigned_date|date:"M j, Y" }}</div>
+        <a href="{% url 'company_detail' active_assignment.pk %}" class="btn btn-sm btn-outline-primary">Open Assignment</a>
+        {% else %}
+        <p class="text-muted small mb-3">No active assignment.</p>
+        {% if not company.is_archived and company.status == 'unassigned' %}
+        <a href="{% url 'staff_assign' %}?company={{ company.pk }}" class="btn btn-sm btn-outline-primary">Assign Company</a>
+        {% endif %}
+        {% endif %}
+      </div>
+    </div>
+
+    {% if pending_requests %}
+    <div class="card mb-4">
+      <div class="card-header py-3"><i class="bi bi-inbox me-2"></i>Pending Requests</div>
+      <ul class="list-group list-group-flush">
+        {% for req in pending_requests %}
+        <li class="list-group-item small">{{ req.volunteer.get_full_name|default:req.volunteer.username }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if not company.is_archived %}
+    <div class="card border-danger">
+      <div class="card-header py-3 text-danger"><i class="bi bi-archive me-2"></i>Remove Company</div>
+      <div class="card-body">
+        <p class="text-muted small">Remove this company from operational lists without deleting its history.</p>
+        <a href="{% url 'staff_company_archive' company.pk %}" class="btn btn-outline-danger">
+          <i class="bi bi-archive me-1"></i>Remove from Lists
+        </a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header py-3"><i class="bi bi-clock-history me-2"></i>Assignment History</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0 small">
+        <thead class="table-light"><tr><th>Volunteer</th><th>Status</th><th>Assigned</th><th>Visits</th><th>Attempts</th><th></th></tr></thead>
+        <tbody>
+          {% for assignment in assignments %}
+          <tr>
+            <td>{{ assignment.volunteer.get_full_name|default:assignment.volunteer.username }}</td>
+            <td>{{ assignment.get_status_display }}</td>
+            <td>{{ assignment.assigned_date|date:"M j, Y" }}</td>
+            <td>{{ assignment.visit_count }}</td>
+            <td>{{ assignment.attempt_count }}</td>
+            <td class="text-end"><a href="{% url 'company_detail' assignment.pk %}" class="btn btn-sm btn-outline-secondary">Open</a></td>
+          </tr>
+          {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">No assignment history.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-7">
+    <div class="card h-100">
+      <div class="card-header py-3"><i class="bi bi-journal-check me-2"></i>Visit Notes</div>
+      <div class="card-body">
+        {% for note in visit_notes %}
+        <div class="{% if not forloop.last %}border-bottom pb-3 mb-3{% endif %}">
+          <div class="d-flex justify-content-between gap-3">
+            <div class="fw-semibold">{{ note.visit_date|date:"M j, Y" }}</div>
+            <a href="{% url 'edit_visit_note' note.assignment.pk note.pk %}" class="small">Edit note</a>
+          </div>
+          <div class="text-muted small mb-2">by {{ note.visited_by.get_full_name|default:note.visited_by.username }}</div>
+          <div class="small">{{ note.notes|linebreaksbr }}</div>
+          {% if note.follow_up_needed %}<div class="alert alert-warning py-2 px-3 small mt-2 mb-0"><strong>Follow-up:</strong> {{ note.follow_up_notes|default:"No details provided" }}</div>{% endif %}
+        </div>
+        {% empty %}<p class="text-muted text-center my-4">No visit notes.</p>{% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-5">
+    <div class="card h-100">
+      <div class="card-header py-3"><i class="bi bi-telephone me-2"></i>Contact Attempts</div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for attempt in contact_attempts %}
+          <li class="list-group-item">
+            <div class="d-flex justify-content-between gap-2 small">
+              <span class="fw-semibold">{{ attempt.get_method_display }}</span>
+              <span class="text-muted">{{ attempt.attempt_date|date:"M j, Y" }}</span>
+            </div>
+            {% if attempt.notes %}<div class="small text-muted mt-1">{{ attempt.notes|linebreaksbr }}</div>{% endif %}
+          </li>
+          {% empty %}<li class="list-group-item text-muted text-center py-4">No contact attempts.</li>{% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

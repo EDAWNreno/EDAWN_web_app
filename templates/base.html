@@ -199,6 +199,9 @@
       <a href="{% url 'staff_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_dashboard' %}active{% endif %}">
         <i class="bi bi-speedometer2"></i> Staff Dashboard
       </a>
+      <a href="{% url 'staff_companies' %}" class="nav-link {% if 'staff_compan' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-buildings"></i> Companies
+      </a>
       <a href="{% url 'staff_volunteers' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_volunteers' %}active{% endif %}">
         <i class="bi bi-people"></i> Volunteer Roster
       </a>

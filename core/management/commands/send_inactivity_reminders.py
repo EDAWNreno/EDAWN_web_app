@@ -20,14 +20,19 @@ class Command(BaseCommand):
 
         active_assignments_qs = (
             Assignment.objects
-            .filter(status=Assignment.STATUS_ACTIVE)
+            .filter(status=Assignment.STATUS_ACTIVE, company__is_archived=False)
             .select_related('company')
         )
 
         # Volunteers with at least one active assignment, annotated with last visit
         candidates = (
             User.objects
-            .filter(is_active=True, is_staff=False, assignments__status=Assignment.STATUS_ACTIVE)
+            .filter(
+                is_active=True,
+                is_staff=False,
+                assignments__status=Assignment.STATUS_ACTIVE,
+                assignments__company__is_archived=False,
+            )
             .annotate(last_visit=Max('assignments__visit_notes__visit_date'))
             .filter(Q(last_visit__lt=cutoff_30) | Q(last_visit__isnull=True))
             .distinct()

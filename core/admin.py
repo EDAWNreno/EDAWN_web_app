@@ -38,7 +38,7 @@ def _custom_index(self, request, extra_context=None):
     # Active assignments with no visit in 60+ days (includes never-visited)
     not_visited_60d = (
         Assignment.objects
-        .filter(status=Assignment.STATUS_ACTIVE)
+        .filter(status=Assignment.STATUS_ACTIVE, company__is_archived=False)
         .annotate(last_visit=Max('visit_notes__visit_date'))
         .filter(Q(last_visit__lt=cutoff_60) | Q(last_visit__isnull=True))
         .count()
@@ -55,18 +55,27 @@ def _custom_index(self, request, extra_context=None):
     )
 
     extra_context.update({
-        'total_companies':      Company.objects.count(),
-        'unassigned_count':     Company.objects.filter(status=Company.STATUS_UNASSIGNED).count(),
-        'active_assignments':   Assignment.objects.filter(status=Assignment.STATUS_ACTIVE).count(),
-        'total_visited':        Company.objects.filter(status=Company.STATUS_VISITED).count(),
+        'total_companies':      Company.objects.filter(is_archived=False).count(),
+        'unassigned_count':     Company.objects.filter(
+            status=Company.STATUS_UNASSIGNED,
+            is_archived=False,
+        ).count(),
+        'active_assignments': Assignment.objects.filter(
+            status=Assignment.STATUS_ACTIVE,
+            company__is_archived=False,
+        ).count(),
+        'total_visited': Company.objects.filter(
+            status=Company.STATUS_VISITED,
+            is_archived=False,
+        ).count(),
         'total_volunteers':     User.objects.filter(is_active=True, is_staff=False).count(),
         'not_visited_60d':      not_visited_60d,
         'overdue_volunteers':   overdue_volunteers,
         'recent_assignments':   (
-            Assignment.objects.select_related('company', 'volunteer')
+            Assignment.objects.filter(company__is_archived=False).select_related('company', 'volunteer')
             .order_by('-assigned_date')[:8]
         ),
-        'recent_companies':     Company.objects.order_by('-created_at')[:8],
+        'recent_companies':     Company.objects.filter(is_archived=False).order_by('-created_at')[:8],
     })
     return _original_index(self, request, extra_context=extra_context)
 
@@ -238,8 +247,8 @@ class AssignmentInline(admin.TabularInline):
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display   = ('name', 'city', 'state', 'industry', 'status', 'primary_contact_name', 'phone')
-    list_filter    = ('status', 'state', 'industry')
+    list_display   = ('name', 'city', 'state', 'industry', 'status', 'is_archived', 'primary_contact_name', 'phone')
+    list_filter    = ('is_archived', 'status', 'state', 'industry')
     search_fields  = ('name', 'city', 'industry', 'primary_contact_name', 'email', 'phone')
     list_editable  = ('status',)
     readonly_fields = ('created_at', 'updated_at')

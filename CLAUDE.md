@@ -72,6 +72,7 @@ Tests live in `core/tests.py` and cover branding and message-notification flows.
 - `/companies/<id>/contact/`, `/companies/<id>/visit/` → volunteer workflows
 - `/badges/`, `/leaderboard/`, `/messages/`, `/resources/` → engagement and reference
 - `/staff/` → staff dashboard
+- `/staff/companies/` → searchable company management, history, editing, archive/restore
 - `/staff/volunteers/` → volunteer roster with training/BBV/temp-password controls
 - `/staff/requests/` → approve or deny company assignment requests
 - `/staff/notices/` → create and manage notices shown on volunteer dashboards
@@ -101,6 +102,7 @@ Assignment status flow: `active → completed / lost`
 - **AssignmentRequest** — a volunteer's request to be assigned an unassigned company. Capped at 3 pending requests per volunteer (non-BBV volunteers with an active assignment are blocked). Approving one auto-denies all competing requests for the same company. `unique_together = ('company', 'volunteer')`.
 - **Notice** — a staff-authored announcement displayed as an alert banner on all volunteer dashboards. Requires an `expires_at` datetime; disappears automatically after expiry.
 - **Resource** — a titled link (OneDrive or other URL) in a named category, visible to all volunteers on the Resources page. Staff manage these from the same page.
+- **Company archival** — staff removals set `Company.is_archived` and retain assignments, visits, attempts, and requests. Companies with active assignments cannot be archived; restoring clears the archive metadata.
 - **UserProfile** — one-to-one with User (created by post_save signal). Stores `bbv_certified`, `training_completed`, `last_inactivity_notified`.
 - **Badge / UserBadge** — milestone achievements. Auto-awarded by `check_and_award_badges(user)` on contact/visit save. `criteria_value = 0` means manual-award only.
 - **InviteCode** — single-use registration tokens. `RegisterForm` validates and consumes the code on save.
