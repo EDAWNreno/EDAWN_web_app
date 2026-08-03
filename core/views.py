@@ -14,6 +14,7 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Count, Max, Min, Prefetch, Q
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
 
@@ -188,6 +189,7 @@ def staff_companies(request):
     search = request.GET.get('q', '').strip()
     status_filter = request.GET.get('status', 'all')
     archive_filter = request.GET.get('archive', 'active')
+    visibility_filter = request.GET.get('visibility', 'all')
 
     companies = (
         Company.objects
@@ -215,6 +217,11 @@ def staff_companies(request):
     if status_filter in valid_statuses:
         companies = companies.filter(status=status_filter)
 
+    if visibility_filter == 'visible':
+        companies = companies.filter(is_browse_visible=True)
+    elif visibility_filter == 'hidden':
+        companies = companies.filter(is_browse_visible=False)
+
     if search:
         companies = companies.filter(
             Q(name__icontains=search)
@@ -230,14 +237,79 @@ def staff_companies(request):
             'pk',
             filter=Q(is_archived=False, status=Company.STATUS_UNASSIGNED),
         ),
+        browse_visible_total=Count(
+            'pk',
+            filter=Q(
+                is_archived=False,
+                status=Company.STATUS_UNASSIGNED,
+                is_browse_visible=True,
+            ),
+        ),
     )
     return render(request, 'core/staff_companies.html', {
         'companies': companies.order_by('name'),
         'search': search,
         'status_filter': status_filter,
         'archive_filter': archive_filter,
+        'visibility_filter': visibility_filter,
+        'return_query': request.GET.urlencode(),
         'status_choices': Company.STATUS_CHOICES,
         **counts,
+    })
+
+
+@staff_member_required
+def staff_companies_bulk_visibility(request):
+    if request.method != 'POST':
+        return redirect('staff_companies')
+
+    return_query = request.POST.get('return_query', '')
+    return_url = reverse('staff_companies')
+    if return_query:
+        return_url = f'{return_url}?{return_query}'
+
+    company_ids = request.POST.getlist('company_ids')
+    visibility = request.POST.get('visibility')
+    if not company_ids:
+        messages.error(request, 'Select at least one company to update.')
+        return redirect(return_url)
+    if visibility not in {'visible', 'hidden'}:
+        messages.error(request, 'Choose whether the selected companies should be visible or hidden.')
+        return redirect(return_url)
+
+    make_visible = visibility == 'visible'
+    updated = Company.objects.filter(pk__in=company_ids).update(
+        is_browse_visible=make_visible,
+    )
+    label = 'visible in' if make_visible else 'hidden from'
+    company_label = 'company' if updated == 1 else 'companies'
+    messages.success(
+        request,
+        f'{updated} {company_label} marked {label} Browse Companies.',
+    )
+    return redirect(return_url)
+
+
+@staff_member_required
+def staff_companies_hide_all_visible(request):
+    visible_companies = Company.objects.filter(
+        is_archived=False,
+        status=Company.STATUS_UNASSIGNED,
+        is_browse_visible=True,
+    )
+    visible_count = visible_companies.count()
+
+    if request.method == 'POST':
+        updated = visible_companies.update(is_browse_visible=False)
+        company_label = 'company was' if updated == 1 else 'companies were'
+        messages.success(
+            request,
+            f'{updated} currently visible {company_label} hidden from Browse Companies.',
+        )
+        return redirect('staff_companies')
+
+    return render(request, 'core/staff_companies_hide_all_confirm.html', {
+        'visible_count': visible_count,
     })
 
 
@@ -1364,6 +1436,7 @@ def company_browse(request):
         Company.objects.filter(
             status=Company.STATUS_UNASSIGNED,
             is_archived=False,
+            is_browse_visible=True,
         )
         .annotate(pending_requests=Count(
             'assignment_requests',
@@ -1381,17 +1454,25 @@ def company_browse(request):
         Company.objects.filter(
             status=Company.STATUS_UNASSIGNED,
             is_archived=False,
+            is_browse_visible=True,
         )
         .exclude(industry='').values_list('industry', flat=True)
         .distinct().order_by('industry')
     )
 
-    # Current user's pending requests
-    my_request_ids = set(
+    # Current user's pending requests. Hidden requests remain cancellable so a
+    # visibility change never traps one of the volunteer's request slots.
+    my_pending_requests = list(
         AssignmentRequest.objects.filter(
-            volunteer=request.user, status=AssignmentRequest.STATUS_PENDING
-        ).values_list('company_id', flat=True)
+            volunteer=request.user,
+            status=AssignmentRequest.STATUS_PENDING,
+        ).select_related('company')
     )
+    my_request_ids = {item.company_id for item in my_pending_requests}
+    hidden_pending_requests = [
+        item for item in my_pending_requests
+        if not item.company.is_browse_visible
+    ]
 
     profile = getattr(request.user, 'profile', None)
     at_cap = (
@@ -1404,6 +1485,7 @@ def company_browse(request):
         'industries':      industries,
         'industry_filter': industry_filter,
         'my_request_ids':  my_request_ids,
+        'hidden_pending_requests': hidden_pending_requests,
         'pending_count':   len(my_request_ids),
         'request_limit':   REQUEST_LIMIT,
         'at_cap':          at_cap,
@@ -1430,6 +1512,9 @@ def toggle_assignment_request(request, pk):
         existing.delete()
         messages.success(request, f'Request for "{company.name}" cancelled.')
         return redirect('company_browse')
+
+    if not company.is_browse_visible:
+        get_object_or_404(Company, pk=company.pk, is_browse_visible=True)
 
     # Check cap
     pending_count = AssignmentRequest.objects.filter(

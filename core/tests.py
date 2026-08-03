@@ -96,6 +96,7 @@ class CompanyManagementTests(TestCase):
             'primary_contact_name': self.company.primary_contact_name,
             'primary_contact_title': self.company.primary_contact_title,
             'notes': self.company.notes,
+            'is_browse_visible': 'on',
         }
         payload.update(overrides)
         return payload
@@ -236,6 +237,130 @@ class CompanyManagementTests(TestCase):
         self.assertFalse(self.company.is_archived)
         self.assertIsNone(self.company.archived_at)
         self.assertIsNone(self.company.archived_by)
+
+    def test_staff_can_control_individual_browse_visibility(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            reverse('staff_company_detail', args=[self.company.pk]),
+            self._company_payload(is_browse_visible=False),
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('staff_company_detail', args=[self.company.pk]),
+        )
+        self.company.refresh_from_db()
+        self.assertFalse(self.company.is_browse_visible)
+
+        self.client.force_login(self.volunteer)
+        browse_response = self.client.get(reverse('company_browse'))
+        self.assertNotContains(browse_response, self.company.name)
+        request_response = self.client.post(
+            reverse('toggle_assignment_request', args=[self.company.pk]),
+        )
+        self.assertEqual(request_response.status_code, 404)
+
+    def test_hidden_company_request_remains_cancellable(self):
+        self.company.is_browse_visible = False
+        self.company.save(update_fields=['is_browse_visible'])
+        pending = AssignmentRequest.objects.create(
+            company=self.company,
+            volunteer=self.volunteer,
+        )
+        self.client.force_login(self.volunteer)
+
+        browse_response = self.client.get(reverse('company_browse'))
+        cancel_response = self.client.post(
+            reverse('toggle_assignment_request', args=[self.company.pk]),
+        )
+
+        self.assertContains(browse_response, 'Hidden pending request')
+        self.assertContains(browse_response, self.company.name)
+        self.assertRedirects(cancel_response, reverse('company_browse'))
+        self.assertFalse(AssignmentRequest.objects.filter(pk=pending.pk).exists())
+
+    def test_staff_can_filter_and_bulk_update_browse_visibility(self):
+        hidden_company = Company.objects.create(
+            name='Hidden Company',
+            is_browse_visible=False,
+        )
+        untouched_company = Company.objects.create(name='Untouched Company')
+        self.client.force_login(self.staff)
+
+        visible_response = self.client.get(
+            reverse('staff_companies'),
+            {'visibility': 'visible'},
+        )
+        hidden_response = self.client.get(
+            reverse('staff_companies'),
+            {'visibility': 'hidden'},
+        )
+        bulk_response = self.client.post(
+            reverse('staff_companies_bulk_visibility'),
+            {
+                'company_ids': [self.company.pk, hidden_company.pk],
+                'visibility': 'hidden',
+                'return_query': 'visibility=visible',
+            },
+        )
+
+        self.assertContains(visible_response, self.company.name)
+        self.assertNotContains(visible_response, hidden_company.name)
+        self.assertContains(hidden_response, hidden_company.name)
+        self.assertNotContains(hidden_response, self.company.name)
+        self.assertRedirects(
+            bulk_response,
+            f"{reverse('staff_companies')}?visibility=visible",
+        )
+        self.company.refresh_from_db()
+        hidden_company.refresh_from_db()
+        untouched_company.refresh_from_db()
+        self.assertFalse(self.company.is_browse_visible)
+        self.assertFalse(hidden_company.is_browse_visible)
+        self.assertTrue(untouched_company.is_browse_visible)
+
+        self.client.force_login(self.volunteer)
+        denied_response = self.client.post(
+            reverse('staff_companies_bulk_visibility'),
+            {
+                'company_ids': [self.company.pk],
+                'visibility': 'visible',
+            },
+        )
+        self.assertEqual(denied_response.status_code, 302)
+        self.assertIn('/admin/login/', denied_response.url)
+        self.company.refresh_from_db()
+        self.assertFalse(self.company.is_browse_visible)
+
+    def test_hide_all_visible_only_hides_companies_currently_in_browse(self):
+        hidden_company = Company.objects.create(
+            name='Already Hidden',
+            is_browse_visible=False,
+        )
+        assigned_company = Company.objects.create(
+            name='Assigned but Visibility On',
+            status=Company.STATUS_ASSIGNED,
+        )
+        archived_company = Company.objects.create(
+            name='Archived but Visibility On',
+            is_archived=True,
+        )
+        self.client.force_login(self.staff)
+
+        confirm_response = self.client.get(reverse('staff_companies_hide_all_visible'))
+        response = self.client.post(reverse('staff_companies_hide_all_visible'))
+
+        self.assertContains(confirm_response, 'Hide All 1')
+        self.assertRedirects(response, reverse('staff_companies'))
+        self.company.refresh_from_db()
+        hidden_company.refresh_from_db()
+        assigned_company.refresh_from_db()
+        archived_company.refresh_from_db()
+        self.assertFalse(self.company.is_browse_visible)
+        self.assertFalse(hidden_company.is_browse_visible)
+        self.assertTrue(assigned_company.is_browse_visible)
+        self.assertTrue(archived_company.is_browse_visible)
 
     def test_csv_import_restores_archived_company_without_overwriting_details(self):
         self.company.is_archived = True

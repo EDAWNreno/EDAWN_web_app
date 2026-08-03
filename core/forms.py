@@ -269,7 +269,7 @@ class QuickCompanyForm(forms.ModelForm):
     class Meta:
         model  = Company
         fields = ('name', 'industry', 'address', 'city', 'state', 'zip_code', 'phone', 'email',
-                  'primary_contact_name')
+                  'primary_contact_name', 'is_browse_visible')
         widgets = {
             'name':                 forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Company name'}),
             'industry':             forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Industry'}),
@@ -280,6 +280,7 @@ class QuickCompanyForm(forms.ModelForm):
             'phone':                forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Phone'}),
             'email':                forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email'}),
             'primary_contact_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Contact name'}),
+            'is_browse_visible':    forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
 
@@ -289,7 +290,7 @@ class CompanyManagementForm(forms.ModelForm):
         fields = (
             'name', 'status', 'industry', 'address', 'city', 'state', 'zip_code',
             'phone', 'email', 'website', 'primary_contact_name',
-            'primary_contact_title', 'notes',
+            'primary_contact_title', 'notes', 'is_browse_visible',
         )
         widgets = {
             'name':                  forms.TextInput(attrs=_fc),
@@ -305,6 +306,7 @@ class CompanyManagementForm(forms.ModelForm):
             'primary_contact_name':  forms.TextInput(attrs=_fc),
             'primary_contact_title': forms.TextInput(attrs=_fc),
             'notes':                 forms.Textarea(attrs={**_fc, 'rows': 5}),
+            'is_browse_visible':     forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
     def clean_status(self):

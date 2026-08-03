@@ -33,6 +33,11 @@ class Company(models.Model):
     primary_contact_title = models.CharField(max_length=100, blank=True)
     notes                 = models.TextField(blank=True, help_text="Internal admin notes")
     status                = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_UNASSIGNED, db_index=True)
+    is_browse_visible     = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text='Show this company in Browse Companies when it is active and unassigned.',
+    )
     is_archived           = models.BooleanField(default=False, db_index=True)
     archived_at           = models.DateTimeField(null=True, blank=True)
     archived_by           = models.ForeignKey(

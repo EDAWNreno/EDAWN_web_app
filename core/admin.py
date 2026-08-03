@@ -248,16 +248,16 @@ class AssignmentInline(admin.TabularInline):
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display   = ('name', 'city', 'state', 'industry', 'status', 'is_archived', 'primary_contact_name', 'phone')
-    list_filter    = ('is_archived', 'status', 'state', 'industry')
+    list_display   = ('name', 'city', 'state', 'industry', 'status', 'is_browse_visible', 'is_archived', 'primary_contact_name', 'phone')
+    list_filter    = ('is_browse_visible', 'is_archived', 'status', 'state', 'industry')
     search_fields  = ('name', 'city', 'industry', 'primary_contact_name', 'email', 'phone')
-    list_editable  = ('status',)
+    list_editable  = ('status', 'is_browse_visible')
     readonly_fields = ('created_at', 'updated_at')
     ordering       = ('name',)
     inlines        = [AssignmentInline]
     fieldsets = (
         ('Company Info', {
-            'fields': ('name', 'industry', 'status', 'notes'),
+            'fields': ('name', 'industry', 'status', 'is_browse_visible', 'notes'),
         }),
         ('Location', {
             'fields': ('address', 'city', 'state', 'zip_code'),

@@ -71,6 +71,17 @@
               <label class="form-label fw-semibold">Internal Admin Notes</label>{{ form.notes }}
               <div class="form-text">Visible to staff on this management page.</div>
             </div>
+            <div class="col-12">
+              <div class="form-check">
+                {{ form.is_browse_visible }}
+                <label class="form-check-label fw-semibold" for="{{ form.is_browse_visible.id_for_label }}">
+                  Visible in Browse Companies
+                </label>
+                <div class="form-text">
+                  This company appears to volunteers only while it is active, unassigned, and this setting is enabled.
+                </div>
+              </div>
+            </div>
           </div>
           <div class="mt-4">
             <button class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Changes</button>

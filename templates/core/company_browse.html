@@ -23,6 +23,19 @@
   <i class="bi bi-clock me-1"></i>
   You have <strong>{{ pending_count }} of {{ request_limit }}</strong> pending request{{ pending_count|pluralize }}.
   Click a company's button again to cancel that request.
+  {% if hidden_pending_requests %}
+  <div class="mt-2 pt-2 border-top">
+    <strong>Hidden pending request{{ hidden_pending_requests|length|pluralize }}:</strong>
+    {% for pending in hidden_pending_requests %}
+    <form method="post" action="{% url 'toggle_assignment_request' pending.company.pk %}" class="d-inline ms-1">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2">
+        {{ pending.company.name }} &middot; Cancel
+      </button>
+    </form>
+    {% endfor %}
+  </div>
+  {% endif %}
 </div>
 {% endif %}
 
@@ -110,7 +123,7 @@
 <div class="card">
   <div class="card-body text-center py-5 text-muted">
     <i class="bi bi-building-check fs-2 d-block mb-2"></i>
-    {% if industry_filter %}No unassigned companies in that industry.{% else %}All companies are currently assigned.{% endif %}
+    {% if industry_filter %}No companies are currently available in that industry.{% else %}No companies are currently available to browse.{% endif %}
   </div>
 </div>
 {% endif %}

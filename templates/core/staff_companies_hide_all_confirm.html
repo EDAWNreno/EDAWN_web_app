@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Hide All Browse-Visible Companies – Northern NV Now{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-1">
+      <li class="breadcrumb-item"><a href="{% url 'staff_companies' %}">Company Management</a></li>
+      <li class="breadcrumb-item active">Hide All Visible</li>
+    </ol>
+  </nav>
+  <h4 class="mb-0 fw-bold"><i class="bi bi-eye-slash me-2"></i>Hide All Currently Visible Companies?</h4>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card border-warning">
+      <div class="card-body p-4">
+        {% if visible_count %}
+        <p>
+          This will hide <strong>{{ visible_count }} compan{{ visible_count|pluralize:"y,ies" }}</strong>
+          currently listed in Browse Companies.
+        </p>
+        <div class="alert alert-info small">
+          No companies, assignments, requests, notes, or history will be deleted. You can restore visibility later
+          from Company Management using the Hidden filter and bulk selection.
+        </div>
+        <form method="post" class="d-flex gap-2">
+          {% csrf_token %}
+          <button class="btn btn-warning"><i class="bi bi-eye-slash me-1"></i>Hide All {{ visible_count }}</button>
+          <a href="{% url 'staff_companies' %}" class="btn btn-outline-secondary">Cancel</a>
+        </form>
+        {% else %}
+        <p class="text-muted">No active, unassigned companies are currently visible in Browse Companies.</p>
+        <a href="{% url 'staff_companies' %}" class="btn btn-outline-secondary">Back to Companies</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
