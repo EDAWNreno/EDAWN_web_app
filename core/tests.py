@@ -79,6 +79,7 @@ class CompanyManagementTests(TestCase):
             industry='Manufacturing',
             city='Reno',
             notes='Call the operations director before visiting.',
+            is_browse_visible=True,
         )
 
     def _company_payload(self, **overrides):
@@ -261,6 +262,29 @@ class CompanyManagementTests(TestCase):
         )
         self.assertEqual(request_response.status_code, 404)
 
+    def test_new_manual_and_csv_companies_start_hidden(self):
+        self.client.force_login(self.staff)
+
+        manual_response = self.client.post(reverse('staff_add_company'), {
+            'name': 'New Manual Company',
+        })
+        csv_response = self.client.post(reverse('staff_import_csv'), {
+            'csv_file': SimpleUploadedFile(
+                'companies.csv',
+                b'name\nNew CSV Company\n',
+                content_type='text/csv',
+            ),
+        })
+
+        self.assertRedirects(manual_response, reverse('staff_add_company'))
+        self.assertRedirects(csv_response, reverse('staff_import_csv'))
+        self.assertFalse(
+            Company.objects.get(name='New Manual Company').is_browse_visible,
+        )
+        self.assertFalse(
+            Company.objects.get(name='New CSV Company').is_browse_visible,
+        )
+
     def test_hidden_company_request_remains_cancellable(self):
         self.company.is_browse_visible = False
         self.company.save(update_fields=['is_browse_visible'])
@@ -285,7 +309,10 @@ class CompanyManagementTests(TestCase):
             name='Hidden Company',
             is_browse_visible=False,
         )
-        untouched_company = Company.objects.create(name='Untouched Company')
+        untouched_company = Company.objects.create(
+            name='Untouched Company',
+            is_browse_visible=True,
+        )
         self.client.force_login(self.staff)
 
         visible_response = self.client.get(
@@ -341,10 +368,12 @@ class CompanyManagementTests(TestCase):
         assigned_company = Company.objects.create(
             name='Assigned but Visibility On',
             status=Company.STATUS_ASSIGNED,
+            is_browse_visible=True,
         )
         archived_company = Company.objects.create(
             name='Archived but Visibility On',
             is_archived=True,
+            is_browse_visible=True,
         )
         self.client.force_login(self.staff)
 

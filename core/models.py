@@ -34,7 +34,7 @@ class Company(models.Model):
     notes                 = models.TextField(blank=True, help_text="Internal admin notes")
     status                = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_UNASSIGNED, db_index=True)
     is_browse_visible     = models.BooleanField(
-        default=True,
+        default=False,
         db_index=True,
         help_text='Show this company in Browse Companies when it is active and unassigned.',
     )

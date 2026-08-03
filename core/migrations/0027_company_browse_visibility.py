@@ -17,4 +17,13 @@ class Migration(migrations.Migration):
                 help_text='Show this company in Browse Companies when it is active and unassigned.',
             ),
         ),
+        migrations.AlterField(
+            model_name='company',
+            name='is_browse_visible',
+            field=models.BooleanField(
+                db_index=True,
+                default=False,
+                help_text='Show this company in Browse Companies when it is active and unassigned.',
+            ),
+        ),
     ]
