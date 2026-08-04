@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from .forms import CompanyCSVUploadForm
+from .company_import import company_data_from_csv_row
 from .models import Assignment, AssignmentRequest, Badge, Company, ContactAttempt, InviteCode, Message, Notice, Reply, Resource, UserBadge, UserProfile, VisitNote
 
 # ---------------------------------------------------------------------------
@@ -248,8 +249,8 @@ class AssignmentInline(admin.TabularInline):
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display   = ('name', 'city', 'state', 'industry', 'status', 'is_browse_visible', 'is_archived', 'primary_contact_name', 'phone')
-    list_filter    = ('is_browse_visible', 'is_archived', 'status', 'state', 'industry')
+    list_display   = ('name', 'city', 'state', 'industry', 'status', 'imported_last_visit_date', 'is_browse_visible', 'is_archived', 'primary_contact_name', 'phone')
+    list_filter    = ('is_browse_visible', 'is_archived', 'status', 'imported_last_visit_date', 'state', 'industry')
     search_fields  = ('name', 'city', 'industry', 'primary_contact_name', 'email', 'phone')
     list_editable  = ('status', 'is_browse_visible')
     readonly_fields = ('created_at', 'updated_at')
@@ -257,7 +258,7 @@ class CompanyAdmin(admin.ModelAdmin):
     inlines        = [AssignmentInline]
     fieldsets = (
         ('Company Info', {
-            'fields': ('name', 'industry', 'status', 'is_browse_visible', 'notes'),
+            'fields': ('name', 'industry', 'status', 'imported_last_visit_date', 'is_browse_visible', 'notes'),
         }),
         ('Location', {
             'fields': ('address', 'city', 'state', 'zip_code'),
@@ -302,40 +303,22 @@ class CompanyAdmin(admin.ModelAdmin):
                     decoded = csv_file.read().decode('utf-8-sig')
                     reader  = csv.DictReader(io.StringIO(decoded))
 
-                    # Flexible column name mapping
-                    FIELD_MAP = {
-                        'name':                  'name',
-                        'address':               'address',
-                        'city':                  'city',
-                        'state':                 'state',
-                        'zip':                   'zip_code',
-                        'zip_code':              'zip_code',
-                        'phone':                 'phone',
-                        'email':                 'email',
-                        'website':               'website',
-                        'industry':              'industry',
-                        'contact_name':          'primary_contact_name',
-                        'primary_contact_name':  'primary_contact_name',
-                        'contact_title':         'primary_contact_title',
-                        'primary_contact_title': 'primary_contact_title',
-                        'notes':                 'notes',
-                    }
-
                     created = updated = restored = skipped = 0
                     row_errors = []
 
                     for i, row in enumerate(reader, start=2):
-                        name = row.get('name', '').strip()
+                        name = (row.get('name') or '').strip()
                         if not name:
                             row_errors.append(f"Row {i}: skipped (no name)")
                             skipped += 1
                             continue
 
-                        data = {}
-                        for csv_col, model_field in FIELD_MAP.items():
-                            val = row.get(csv_col, '').strip()
-                            if val:
-                                data[model_field] = val
+                        try:
+                            data = company_data_from_csv_row(row)
+                        except ValueError as exc:
+                            row_errors.append(f"Row {i}: skipped ({exc})")
+                            skipped += 1
+                            continue
 
                         existing = Company.objects.filter(name__iexact=name).first()
                         if existing:

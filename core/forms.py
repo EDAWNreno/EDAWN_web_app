@@ -290,7 +290,8 @@ class CompanyManagementForm(forms.ModelForm):
         fields = (
             'name', 'status', 'industry', 'address', 'city', 'state', 'zip_code',
             'phone', 'email', 'website', 'primary_contact_name',
-            'primary_contact_title', 'notes', 'is_browse_visible',
+            'primary_contact_title', 'notes', 'imported_last_visit_date',
+            'is_browse_visible',
         )
         widgets = {
             'name':                  forms.TextInput(attrs=_fc),
@@ -306,6 +307,10 @@ class CompanyManagementForm(forms.ModelForm):
             'primary_contact_name':  forms.TextInput(attrs=_fc),
             'primary_contact_title': forms.TextInput(attrs=_fc),
             'notes':                 forms.Textarea(attrs={**_fc, 'rows': 5}),
+            'imported_last_visit_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date',
+            }),
             'is_browse_visible':     forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
@@ -367,7 +372,8 @@ class CompanyCSVUploadForm(forms.Form):
         help_text=(
             'Required column: <strong>name</strong>. '
             'Optional: address, city, state, zip_code, phone, email, website, '
-            'industry, primary_contact_name, primary_contact_title, notes'
+            'industry, primary_contact_name, primary_contact_title, notes, '
+            'last_visit_date'
         ),
         widget=forms.FileInput(attrs={'accept': '.csv', 'class': 'form-control'}),
     )

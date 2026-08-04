@@ -38,6 +38,12 @@ class Company(models.Model):
         db_index=True,
         help_text='Show this company in Browse Companies when it is active and unassigned.',
     )
+    imported_last_visit_date = models.DateField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text='Most recent known visit imported from a prior system or CSV.',
+    )
     is_archived           = models.BooleanField(default=False, db_index=True)
     archived_at           = models.DateTimeField(null=True, blank=True)
     archived_by           = models.ForeignKey(

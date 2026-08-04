@@ -1,3 +1,5 @@
+from datetime import date, datetime
+
 from django.contrib.auth.models import User
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -6,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .emails import notify_invite
-from .models import Assignment, AssignmentRequest, Company, ContactAttempt, Message
+from .models import Assignment, AssignmentRequest, Company, ContactAttempt, Message, VisitNote
 
 
 @override_settings(
@@ -97,6 +99,10 @@ class CompanyManagementTests(TestCase):
             'primary_contact_name': self.company.primary_contact_name,
             'primary_contact_title': self.company.primary_contact_title,
             'notes': self.company.notes,
+            'imported_last_visit_date': (
+                self.company.imported_last_visit_date.isoformat()
+                if self.company.imported_last_visit_date else ''
+            ),
             'is_browse_visible': 'on',
         }
         payload.update(overrides)
@@ -284,6 +290,107 @@ class CompanyManagementTests(TestCase):
         self.assertFalse(
             Company.objects.get(name='New CSV Company').is_browse_visible,
         )
+
+    def test_csv_import_accepts_last_visit_dates_and_updates_existing_company(self):
+        self.client.force_login(self.staff)
+
+        create_response = self.client.post(reverse('staff_import_csv'), {
+            'csv_file': SimpleUploadedFile(
+                'companies.csv',
+                b'name,last_visit_date\nISO Company,2023-11-15\nUS Date Company,4/9/2022\n',
+                content_type='text/csv',
+            ),
+        })
+        update_response = self.client.post(reverse('staff_import_csv'), {
+            'csv_file': SimpleUploadedFile(
+                'companies.csv',
+                f'name,last_visit_date\n{self.company.name},2024-06-30\n'.encode(),
+                content_type='text/csv',
+            ),
+            'overwrite_existing': 'on',
+        })
+
+        self.assertRedirects(create_response, reverse('staff_import_csv'))
+        self.assertRedirects(update_response, reverse('staff_import_csv'))
+        self.assertEqual(
+            Company.objects.get(name='ISO Company').imported_last_visit_date,
+            date(2023, 11, 15),
+        )
+        self.assertEqual(
+            Company.objects.get(name='US Date Company').imported_last_visit_date,
+            date(2022, 4, 9),
+        )
+        self.company.refresh_from_db()
+        self.assertEqual(self.company.imported_last_visit_date, date(2024, 6, 30))
+
+    def test_csv_import_skips_invalid_last_visit_date_without_stopping_import(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.post(reverse('staff_import_csv'), {
+            'csv_file': SimpleUploadedFile(
+                'companies.csv',
+                (
+                    b'name,last_visit\n'
+                    b'Invalid Date Company,not-a-date\n'
+                    b'Valid Date Company,7/18/2023\n'
+                ),
+                content_type='text/csv',
+            ),
+        }, follow=True)
+
+        self.assertContains(response, '1 created')
+        self.assertContains(response, '1 skipped')
+        self.assertFalse(Company.objects.filter(name='Invalid Date Company').exists())
+        self.assertEqual(
+            Company.objects.get(name='Valid Date Company').imported_last_visit_date,
+            date(2023, 7, 18),
+        )
+
+    def test_staff_can_filter_by_effective_last_visit_year(self):
+        self.company.imported_last_visit_date = date(2022, 5, 1)
+        self.company.save(update_fields=['imported_last_visit_date'])
+        imported_company = Company.objects.create(
+            name='Imported 2023 Company',
+            imported_last_visit_date=date(2023, 7, 4),
+        )
+        no_visit_company = Company.objects.create(name='No Visit Company')
+        assignment = Assignment.objects.create(
+            company=self.company,
+            volunteer=self.volunteer,
+            assigned_by=self.staff,
+        )
+        visit = VisitNote.objects.create(
+            assignment=assignment,
+            visited_by=self.volunteer,
+            notes='Portal visit after the imported historical date.',
+        )
+        VisitNote.objects.filter(pk=visit.pk).update(
+            visit_date=timezone.make_aware(datetime(2024, 8, 12, 10, 0)),
+        )
+        self.client.force_login(self.staff)
+
+        response_2024 = self.client.get(
+            reverse('staff_companies'),
+            {'last_visit_year': '2024'},
+        )
+        response_2023 = self.client.get(
+            reverse('staff_companies'),
+            {'last_visit_year': '2023'},
+        )
+        response_2022 = self.client.get(
+            reverse('staff_companies'),
+            {'last_visit_year': '2022'},
+        )
+        response_none = self.client.get(
+            reverse('staff_companies'),
+            {'last_visit_year': 'none'},
+        )
+
+        self.assertContains(response_2024, self.company.name)
+        self.assertNotContains(response_2022, self.company.name)
+        self.assertContains(response_2023, imported_company.name)
+        self.assertContains(response_none, no_visit_company.name)
+        self.assertNotContains(response_none, imported_company.name)
 
     def test_hidden_company_request_remains_cancellable(self):
         self.company.is_browse_visible = False

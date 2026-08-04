@@ -71,6 +71,10 @@
               <label class="form-label fw-semibold">Internal Admin Notes</label>{{ form.notes }}
               <div class="form-text">Visible to staff on this management page.</div>
             </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Imported Last Visit Date</label>{{ form.imported_last_visit_date }}
+              <div class="form-text">Historical date from Salesforce, CSV, or another prior system.</div>
+            </div>
             <div class="col-12">
               <div class="form-check">
                 {{ form.is_browse_visible }}

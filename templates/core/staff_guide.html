@@ -121,25 +121,29 @@ table tr:nth-child(even) td{background:#f5f8f8;}
 <ul>
 <li>Open one company to turn its <strong>Visible in Browse Companies</strong> setting on or off.</li>
 <li>Use the <strong>Browse Visibility</strong> filter to show visible or hidden records.</li>
+<li>Use the <strong>Last Visit Year</strong> filter to show companies by their most recent imported or portal visit, including companies with no visit date.</li>
 <li>Select individual rows, or use the header checkbox to select every displayed row, then choose <strong>Show</strong> or <strong>Hide</strong> and click <strong>Update Selected</strong>.</li>
 <li>Use <strong>Hide All Visible</strong> and confirm to clear the current volunteer browse list in one reversible action.</li>
 </ul>
 <div class="callout">Visibility affects only Browse Companies. It does not delete a company or change assignments, requests, notes, or history. Assigned and archived companies never appear in Browse Companies even if their visibility setting is on.</div>
 <div class="tip">Companies created manually or imported from CSV start hidden. Use Company Management to review them and make selected records visible when they are ready.</div>
 <h3>Importing from CSV</h3>
-<p>For bulk uploads, use <strong>Import CSV</strong> from the Quick Actions bar. Save your spreadsheet as a .csv file. The importer recognises these column names (case-insensitive, spaces or underscores allowed):</p>
+<p>For bulk uploads, use <strong>Import CSV</strong> from the Quick Actions bar. Save your spreadsheet as a .csv file. Use these lowercase column names:</p>
 <table>
 <tr><th>Field</th><th>Example column names accepted</th></tr>
-<tr><td>Company name</td><td>name, company, company name</td></tr>
-<tr><td>Industry</td><td>industry, industry group</td></tr>
-<tr><td>Address</td><td>address, street, street address</td></tr>
-<tr><td>City / State / Zip</td><td>city, state, zip / zip code / postal code</td></tr>
-<tr><td>Phone</td><td>phone, phone number</td></tr>
+<tr><td>Company name</td><td>name</td></tr>
+<tr><td>Industry</td><td>industry</td></tr>
+<tr><td>Address</td><td>address</td></tr>
+<tr><td>City / State / Zip</td><td>city, state, zip_code or zip</td></tr>
+<tr><td>Phone</td><td>phone</td></tr>
 <tr><td>Email</td><td>email</td></tr>
-<tr><td>Website</td><td>website, url</td></tr>
-<tr><td>Contact name</td><td>contact, contact name, primary contact</td></tr>
+<tr><td>Website</td><td>website</td></tr>
+<tr><td>Contact name</td><td>primary_contact_name or contact_name</td></tr>
+<tr><td>Contact title</td><td>primary_contact_title or contact_title</td></tr>
+<tr><td>Last visit</td><td>last_visit_date or last_visit (YYYY-MM-DD or M/D/YYYY)</td></tr>
+<tr><td>Internal notes</td><td>notes</td></tr>
 </table>
-<p>Columns that don't match are safely ignored. Companies that already exist (matched by name) are updated, not duplicated. Upload the file, review the preview, and click <strong>Import</strong>.</p>
+<p>Columns that don't match are safely ignored. Existing companies are matched by name and skipped unless <strong>Update existing companies by name</strong> is selected.</p>
 
 <h2 id="s5">5. Assigning Companies</h2>
 <h3>Quick Assign</h3>

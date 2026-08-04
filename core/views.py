@@ -13,7 +13,8 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Count, Max, Min, Prefetch, Q
+from django.db.models import Case, Count, DateField, F, Max, Min, Prefetch, Q, When
+from django.db.models.functions import ExtractYear, TruncDate
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
@@ -33,6 +34,7 @@ from .forms import (RegisterForm, AccountForm, ContactAttemptForm, VisitNoteForm
                      CompanyCSVUploadForm, CompanyManagementForm, VisitExportForm, NoticeForm,
                      ResourceForm)
 from .ratelimit import ratelimit
+from .company_import import company_data_from_csv_row
 
 
 def _get_assignment(pk, user):
@@ -190,6 +192,7 @@ def staff_companies(request):
     status_filter = request.GET.get('status', 'all')
     archive_filter = request.GET.get('archive', 'active')
     visibility_filter = request.GET.get('visibility', 'all')
+    last_visit_year_filter = request.GET.get('last_visit_year', 'all')
 
     companies = (
         Company.objects
@@ -204,7 +207,19 @@ def staff_companies(request):
         .annotate(
             assignment_count=Count('assignments', distinct=True),
             visit_count=Count('assignments__visit_notes', distinct=True),
-            last_visit=Max('assignments__visit_notes__visit_date'),
+            portal_last_visit_date=TruncDate(Max('assignments__visit_notes__visit_date')),
+        )
+        .annotate(
+            last_visit=Case(
+                When(portal_last_visit_date__isnull=True, then=F('imported_last_visit_date')),
+                When(imported_last_visit_date__isnull=True, then=F('portal_last_visit_date')),
+                When(
+                    portal_last_visit_date__gte=F('imported_last_visit_date'),
+                    then=F('portal_last_visit_date'),
+                ),
+                default=F('imported_last_visit_date'),
+                output_field=DateField(),
+            ),
         )
     )
 
@@ -221,6 +236,11 @@ def staff_companies(request):
         companies = companies.filter(is_browse_visible=True)
     elif visibility_filter == 'hidden':
         companies = companies.filter(is_browse_visible=False)
+
+    if last_visit_year_filter == 'none':
+        companies = companies.filter(last_visit__isnull=True)
+    elif last_visit_year_filter.isdigit():
+        companies = companies.filter(last_visit__year=int(last_visit_year_filter))
 
     if search:
         companies = companies.filter(
@@ -246,12 +266,37 @@ def staff_companies(request):
             ),
         ),
     )
+    last_visit_years = (
+        Company.objects
+        .annotate(
+            portal_last_visit_date=TruncDate(Max('assignments__visit_notes__visit_date')),
+        )
+        .annotate(
+            effective_last_visit=Case(
+                When(portal_last_visit_date__isnull=True, then=F('imported_last_visit_date')),
+                When(imported_last_visit_date__isnull=True, then=F('portal_last_visit_date')),
+                When(
+                    portal_last_visit_date__gte=F('imported_last_visit_date'),
+                    then=F('portal_last_visit_date'),
+                ),
+                default=F('imported_last_visit_date'),
+                output_field=DateField(),
+            ),
+        )
+        .exclude(effective_last_visit__isnull=True)
+        .annotate(year=ExtractYear('effective_last_visit'))
+        .values_list('year', flat=True)
+        .distinct()
+        .order_by('-year')
+    )
     return render(request, 'core/staff_companies.html', {
         'companies': companies.order_by('name'),
         'search': search,
         'status_filter': status_filter,
         'archive_filter': archive_filter,
         'visibility_filter': visibility_filter,
+        'last_visit_year_filter': last_visit_year_filter,
+        'last_visit_years': last_visit_years,
         'return_query': request.GET.urlencode(),
         'status_choices': Company.STATUS_CHOICES,
         **counts,
@@ -965,18 +1010,6 @@ def _bbv_overdue_count(cutoff_90):
     )
 
 
-_CSV_FIELD_MAP = {
-    'name': 'name', 'address': 'address', 'city': 'city', 'state': 'state',
-    'zip': 'zip_code', 'zip_code': 'zip_code', 'phone': 'phone',
-    'email': 'email', 'website': 'website', 'industry': 'industry',
-    'contact_name': 'primary_contact_name',
-    'primary_contact_name': 'primary_contact_name',
-    'contact_title': 'primary_contact_title',
-    'primary_contact_title': 'primary_contact_title',
-    'notes': 'notes',
-}
-
-
 @staff_member_required
 def staff_dashboard(request):
     cutoff_60 = timezone.now() - timedelta(days=60)
@@ -1127,16 +1160,17 @@ def staff_import_csv(request):
                 row_errors = []
 
                 for i, row in enumerate(reader, start=2):
-                    name = row.get('name', '').strip()
+                    name = (row.get('name') or '').strip()
                     if not name:
                         row_errors.append(f"Row {i}: skipped (no name)")
                         skipped += 1
                         continue
-                    data = {
-                        model_field: row.get(csv_col, '').strip()
-                        for csv_col, model_field in _CSV_FIELD_MAP.items()
-                        if row.get(csv_col, '').strip()
-                    }
+                    try:
+                        data = company_data_from_csv_row(row)
+                    except ValueError as exc:
+                        row_errors.append(f"Row {i}: skipped ({exc})")
+                        skipped += 1
+                        continue
                     existing = Company.objects.filter(name__iexact=name).first()
                     if existing:
                         if existing.is_archived:

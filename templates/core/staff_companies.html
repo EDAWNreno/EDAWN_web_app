@@ -52,7 +52,7 @@
 <div class="card mb-4">
   <div class="card-body">
     <form method="get" class="row g-3 align-items-end">
-      <div class="col-lg-4">
+      <div class="col-lg-2">
         <label for="company-search" class="form-label small fw-semibold">Search</label>
         <input id="company-search" type="search" name="q" value="{{ search }}" class="form-control"
                placeholder="Company, industry, city, or contact">
@@ -72,6 +72,16 @@
           <option value="all" {% if visibility_filter == 'all' %}selected{% endif %}>All</option>
           <option value="visible" {% if visibility_filter == 'visible' %}selected{% endif %}>Visible</option>
           <option value="hidden" {% if visibility_filter == 'hidden' %}selected{% endif %}>Hidden</option>
+        </select>
+      </div>
+      <div class="col-sm-6 col-lg-2">
+        <label for="last-visit-year-filter" class="form-label small fw-semibold">Last Visit Year</label>
+        <select id="last-visit-year-filter" name="last_visit_year" class="form-select">
+          <option value="all" {% if last_visit_year_filter == 'all' %}selected{% endif %}>All years</option>
+          {% for year in last_visit_years %}
+          <option value="{{ year }}" {% if last_visit_year_filter == year|stringformat:"s" %}selected{% endif %}>{{ year }}</option>
+          {% endfor %}
+          <option value="none" {% if last_visit_year_filter == 'none' %}selected{% endif %}>No visit date</option>
         </select>
       </div>
       <div class="col-sm-6 col-lg-2">
