@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core import mail
@@ -9,6 +10,7 @@ from django.utils import timezone
 
 from .emails import notify_invite
 from .models import Assignment, AssignmentRequest, Company, ContactAttempt, Message, VisitNote
+from .salesforce import sync_visit_to_salesforce
 
 
 @override_settings(
@@ -53,6 +55,91 @@ class BrandingTests(TestCase):
         )
         self.assertIn('kim@northernnvnow.com', mail.outbox[0].body)
         self.assertNotIn('EDAWN', mail.outbox[0].body)
+
+
+@override_settings(
+    SF_CLIENT_ID='salesforce-client',
+    SF_CLIENT_SECRET='salesforce-secret',
+    SF_BUSINESS_BUILDERS_ACCOUNT_ID='001-business-builders',
+    SF_BUSINESS_BUILDERS_OWNER_ID='005-business-builders-owner',
+)
+class SalesforceVisitSyncTests(TestCase):
+    def setUp(self):
+        self.volunteer = User.objects.create_user(
+            username='visit-volunteer',
+            first_name='Val',
+            last_name='Volunteer',
+        )
+        self.company = Company.objects.create(
+            name='Acme Manufacturing',
+            industry='Manufacturing',
+        )
+        self.assignment = Assignment.objects.create(
+            company=self.company,
+            volunteer=self.volunteer,
+        )
+
+    def test_visit_case_uses_business_builders_account_and_snapshot_conventions(self):
+        visit = VisitNote(
+            assignment=self.assignment,
+            visited_by=self.volunteer,
+            notes='Discussed workforce needs.',
+            contact_name='Alex Contact',
+            employee_count=42,
+            at_capacity='yes',
+            expansion_new_building=True,
+            follow_up_needed=True,
+            follow_up_notes='Connect Alex with the expansion team.',
+        )
+        visit.visit_date = timezone.now()
+
+        with (
+            patch(
+                'core.salesforce._get_access_token',
+                return_value=('salesforce-token', 'https://salesforce.example.test'),
+            ),
+            patch('core.salesforce._create_case_stripping_fls_blocks') as create_case,
+        ):
+            sync_visit_to_salesforce(visit)
+
+        case_url, token, payload = create_case.call_args.args
+        self.assertEqual(
+            case_url,
+            'https://salesforce.example.test/services/data/v60.0/sobjects/Case/',
+        )
+        self.assertEqual(token, 'salesforce-token')
+        self.assertEqual(payload['AccountId'], '001-business-builders')
+        self.assertEqual(payload['OwnerId'], '005-business-builders-owner')
+        self.assertEqual(payload['Company_In__c'], 'Acme Manufacturing')
+        self.assertEqual(payload['Subject'], 'Business Builder Visit - Acme Manufacturing')
+        self.assertEqual(payload['Status'], 'Open')
+        self.assertEqual(payload['Priority'], 'Medium')
+        self.assertEqual(payload['Business_Builders_Volunteer_Name__c'], 'Val Volunteer')
+        self.assertEqual(payload['Company_Contact_Name__c'], 'Alex Contact')
+        self.assertEqual(payload['Current_Number_of_Employees__c'], 42)
+        self.assertTrue(payload['At_Capacity__c'])
+        self.assertTrue(payload['Expanding__c'])
+        self.assertTrue(payload['Looking_For_A_New_Location__c'])
+        self.assertNotIn('SuppliedCompany', payload)
+
+    def test_business_builders_account_link_cannot_be_stripped_on_retry(self):
+        from .salesforce import _create_case_stripping_fls_blocks
+
+        error = RuntimeError(
+            'INVALID_FIELD_FOR_INSERT_UPDATE: '
+            '[{"message":"blocked","errorCode":"INVALID_FIELD_FOR_INSERT_UPDATE",'
+            '"fields":["AccountId"]}]'
+        )
+        with patch('core.salesforce._api_request', side_effect=error):
+            with self.assertRaisesMessage(
+                RuntimeError,
+                'required Business Builders AccountId',
+            ):
+                _create_case_stripping_fls_blocks(
+                    'https://salesforce.example.test/case',
+                    'salesforce-token',
+                    {'AccountId': '001-business-builders'},
+                )
 
 
 @override_settings(

@@ -98,6 +98,8 @@ Visit `http://localhost:8000`. Log in with the superuser you created, or with a 
 | `DJANGO_SUPERUSER_PASSWORD` | No | Triggers superuser creation in `build.sh` |
 | `RESEND_API_KEY` | No | Enables transactional email; silently skipped if unset |
 | `DEFAULT_FROM_EMAIL` | No | Defaults to `Northern NV Now Business Builders <noreply@northernnvnow.com>` |
+| `SF_BUSINESS_BUILDERS_ACCOUNT_ID` | No | Salesforce Account for portal visit Cases; defaults to Business Builders |
+| `SF_BUSINESS_BUILDERS_OWNER_ID` | No | Salesforce owner for portal visit Cases; defaults to Kimberly Yaeger |
 | `SITE_URL` | No | Public URL used in email links; defaults to `http://localhost:8000` |
 | `TRAINING_CALENDAR_URL` | No | Calendly booking link shown until training is marked complete |
 
