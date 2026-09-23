@@ -105,6 +105,13 @@
         <div class="text-muted small mb-3">Assigned {{ active_assignment.assigned_date|date:"M j, Y" }}</div>
         <div class="d-flex flex-wrap gap-2">
           <a href="{% url 'company_detail' active_assignment.pk %}" class="btn btn-sm btn-outline-primary">Open Assignment</a>
+          <form method="post" action="{% url 'staff_company_mark_visited' company.pk %}"
+                onsubmit="return confirm('Mark {{ company.name|escapejs }} as visited without a visit report?');">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-success">
+              <i class="bi bi-check-circle me-1"></i>Mark Visited
+            </button>
+          </form>
           <a href="{% url 'staff_unassign_assignment' active_assignment.pk %}" class="btn btn-sm btn-outline-warning">
             <i class="bi bi-person-dash me-1"></i>Unassign
           </a>
@@ -113,6 +120,15 @@
         <p class="text-muted small mb-3">No active assignment.</p>
         {% if not company.is_archived and company.status == 'unassigned' %}
         <a href="{% url 'staff_assign' %}?company={{ company.pk }}" class="btn btn-sm btn-outline-primary">Assign Company</a>
+        {% endif %}
+        {% if not company.is_archived and company.status != 'visited' %}
+        <form method="post" action="{% url 'staff_company_mark_visited' company.pk %}" class="mt-2"
+              onsubmit="return confirm('Mark {{ company.name|escapejs }} as visited without a visit report?');">
+          {% csrf_token %}
+          <button class="btn btn-sm btn-success">
+            <i class="bi bi-check-circle me-1"></i>Mark Visited
+          </button>
+        </form>
         {% endif %}
         {% endif %}
       </div>

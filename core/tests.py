@@ -247,6 +247,77 @@ class CompanyManagementTests(TestCase):
         self.assertEqual(self.company.status, Company.STATUS_VISITED)
         self.assertEqual(self.company.notes, 'Updated internal context.')
 
+    def test_staff_can_mark_assigned_company_visited_without_report(self):
+        assignment = Assignment.objects.create(
+            company=self.company,
+            volunteer=self.volunteer,
+            assigned_by=self.staff,
+        )
+        self.company.status = Company.STATUS_ASSIGNED
+        self.company.save(update_fields=['status'])
+        pending_request = AssignmentRequest.objects.create(
+            company=self.company,
+            volunteer=User.objects.create_user(
+                username='requesting-volunteer',
+                password='test-pass',
+            ),
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            reverse('staff_company_mark_visited', args=[self.company.pk]),
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('staff_company_detail', args=[self.company.pk]),
+        )
+        self.company.refresh_from_db()
+        assignment.refresh_from_db()
+        pending_request.refresh_from_db()
+        self.assertEqual(self.company.status, Company.STATUS_VISITED)
+        self.assertEqual(assignment.status, Assignment.STATUS_COMPLETED)
+        self.assertIsNotNone(assignment.completed_date)
+        self.assertEqual(pending_request.status, AssignmentRequest.STATUS_DENIED)
+        self.assertFalse(VisitNote.objects.filter(assignment=assignment).exists())
+
+    def test_staff_can_mark_unassigned_company_visited_without_report(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            reverse('staff_company_mark_visited', args=[self.company.pk]),
+        )
+
+        self.assertRedirects(
+            response,
+            reverse('staff_company_detail', args=[self.company.pk]),
+        )
+        self.company.refresh_from_db()
+        self.assertEqual(self.company.status, Company.STATUS_VISITED)
+        self.assertFalse(self.company.assignments.exists())
+        self.assertFalse(VisitNote.objects.filter(assignment__company=self.company).exists())
+
+    def test_mark_visited_requires_staff_post_and_active_company(self):
+        url = reverse('staff_company_mark_visited', args=[self.company.pk])
+        self.client.force_login(self.staff)
+        self.assertEqual(self.client.get(url).status_code, 405)
+
+        self.client.force_login(self.volunteer)
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/admin/login/', response.url)
+
+        self.company.is_archived = True
+        self.company.save(update_fields=['is_archived'])
+        self.client.force_login(self.staff)
+        response = self.client.post(url)
+        self.assertRedirects(
+            response,
+            reverse('staff_company_detail', args=[self.company.pk]),
+        )
+        self.company.refresh_from_db()
+        self.assertEqual(self.company.status, Company.STATUS_UNASSIGNED)
+
     def test_active_assignment_prevents_inconsistent_status_and_archiving(self):
         Assignment.objects.create(
             company=self.company,

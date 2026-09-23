@@ -18,6 +18,7 @@ from django.db.models.functions import ExtractYear, TruncDate
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
+from django.views.decorators.http import require_POST
 
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes
@@ -409,6 +410,63 @@ def staff_company_detail(request, pk):
         'pending_requests': pending_requests,
         'active_assignment': company.active_assignment,
     })
+
+
+@staff_member_required
+@require_POST
+def staff_company_mark_visited(request, pk):
+    """Complete an active assignment and mark its company visited without a report."""
+    completed_assignment = None
+
+    with transaction.atomic():
+        company = get_object_or_404(
+            Company.objects.select_for_update(),
+            pk=pk,
+        )
+        if company.is_archived:
+            messages.error(request, f'Archived company "{company.name}" cannot be marked visited.')
+            return redirect('staff_company_detail', pk=company.pk)
+
+        active_assignment = (
+            company.assignments
+            .select_for_update()
+            .filter(status=Assignment.STATUS_ACTIVE)
+            .select_related('volunteer')
+            .first()
+        )
+
+        if company.status == Company.STATUS_VISITED and active_assignment is None:
+            messages.info(request, f'"{company.name}" is already marked visited.')
+            return redirect('staff_company_detail', pk=company.pk)
+
+        if active_assignment is not None:
+            active_assignment.status = Assignment.STATUS_COMPLETED
+            active_assignment.completed_date = timezone.now()
+            active_assignment.save(update_fields=['status', 'completed_date'])
+            completed_assignment = active_assignment
+
+        company.status = Company.STATUS_VISITED
+        company.save(update_fields=['status', 'updated_at'])
+        company.assignment_requests.filter(
+            status=AssignmentRequest.STATUS_PENDING,
+        ).update(status=AssignmentRequest.STATUS_DENIED)
+
+    if completed_assignment is not None:
+        from .badges import check_and_award_badges
+        check_and_award_badges(completed_assignment.volunteer)
+
+    detail = ''
+    if completed_assignment is not None:
+        volunteer_name = (
+            completed_assignment.volunteer.get_full_name()
+            or completed_assignment.volunteer.username
+        )
+        detail = f' {volunteer_name}\'s assignment was completed.'
+    messages.success(
+        request,
+        f'"{company.name}" was marked visited without a visit report.{detail}',
+    )
+    return redirect('staff_company_detail', pk=company.pk)
 
 
 @staff_member_required
