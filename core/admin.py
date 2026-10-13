@@ -12,9 +12,9 @@ from django.urls import path
 from django.utils import timezone
 from django.utils.html import format_html
 
-from .forms import CompanyCSVUploadForm
-from .company_import import company_data_from_csv_row
-from .models import Assignment, AssignmentRequest, Badge, Company, ContactAttempt, InviteCode, Message, Notice, Reply, Resource, UserBadge, UserProfile, VisitNote
+from .forms import BaseCompanyContactFormSet, CompanyCSVUploadForm
+from .company_import import company_data_from_csv_row, contacts_from_csv_row, replace_company_contacts
+from .models import Assignment, AssignmentRequest, Badge, Company, CompanyContact, ContactAttempt, InviteCode, Message, Notice, Reply, Resource, UserBadge, UserProfile, VisitNote
 
 # ---------------------------------------------------------------------------
 # Site branding
@@ -249,6 +249,13 @@ class AssignmentInline(admin.TabularInline):
     can_delete          = False
 
 
+class CompanyContactInline(admin.TabularInline):
+    model = CompanyContact
+    formset = BaseCompanyContactFormSet
+    extra = 1
+    fields = ('name', 'title', 'email', 'phone', 'is_primary')
+
+
 # ---------------------------------------------------------------------------
 # Company
 # ---------------------------------------------------------------------------
@@ -261,7 +268,7 @@ class CompanyAdmin(admin.ModelAdmin):
     list_editable  = ('status', 'is_browse_visible')
     readonly_fields = ('created_at', 'updated_at')
     ordering       = ('name',)
-    inlines        = [AssignmentInline]
+    inlines        = [CompanyContactInline, AssignmentInline]
 
     def has_delete_permission(self, request, obj=None):
         # Use the archive workflow; deleting a company cascades to its history.
@@ -284,6 +291,8 @@ class CompanyAdmin(admin.ModelAdmin):
 
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
+        for obj in formset.deleted_objects:
+            obj.delete()
         for obj in instances:
             if isinstance(obj, Assignment) and not obj.assigned_by_id:
                 obj.assigned_by = request.user
@@ -292,6 +301,8 @@ class CompanyAdmin(admin.ModelAdmin):
             if isinstance(obj, Assignment) and obj.status == Assignment.STATUS_ACTIVE:
                 Company.objects.filter(pk=obj.company_id).update(status=Company.STATUS_ASSIGNED)
         formset.save_m2m()
+        if formset.model is CompanyContact:
+            form.instance.sync_primary_contact()
 
     def get_urls(self):
         return [
@@ -325,6 +336,7 @@ class CompanyAdmin(admin.ModelAdmin):
 
                         try:
                             data = company_data_from_csv_row(row)
+                            contact_data = contacts_from_csv_row(row)
                         except ValueError as exc:
                             row_errors.append(f"Row {i}: skipped ({exc})")
                             skipped += 1
@@ -340,18 +352,22 @@ class CompanyAdmin(admin.ModelAdmin):
                                 existing.archived_at = None
                                 existing.archived_by = None
                                 existing.save()
+                                if overwrite:
+                                    replace_company_contacts(existing, contact_data)
                                 restored += 1
                                 continue
                             if overwrite:
                                 for field, val in data.items():
                                     setattr(existing, field, val)
                                 existing.save()
+                                replace_company_contacts(existing, contact_data)
                                 updated += 1
                             else:
                                 skipped += 1
                         else:
                             data['name'] = name
-                            Company.objects.create(**data)
+                            company = Company.objects.create(**data)
+                            replace_company_contacts(company, contact_data)
                             created += 1
 
                     summary = (

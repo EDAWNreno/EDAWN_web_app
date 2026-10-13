@@ -33,9 +33,9 @@ from .models import Assignment, AssignmentRequest, Badge, Company, ContactAttemp
 from .forms import (RegisterForm, AccountForm, ContactAttemptForm, VisitNoteForm, CompanyContactUpdateForm,
                      MessageForm, ReplyForm, QuickCompanyForm, QuickAssignForm, InviteAdminForm,
                      CompanyCSVUploadForm, CompanyManagementForm, VisitExportForm, NoticeForm,
-                     ResourceForm)
+                     ResourceForm, CompanyContactFormSet)
 from .ratelimit import ratelimit
-from .company_import import company_data_from_csv_row
+from .company_import import company_data_from_csv_row, contacts_from_csv_row, replace_company_contacts
 
 
 def _get_assignment(pk, user):
@@ -175,16 +175,35 @@ def dashboard(request):
 
 @staff_member_required
 def quick_add_company(request):
+    company = Company()
     if request.method == 'POST':
         form = QuickCompanyForm(request.POST)
-        if form.is_valid():
-            company = form.save()
+        contact_formset = CompanyContactFormSet(
+            request.POST,
+            instance=company,
+            prefix='contacts',
+        )
+        if form.is_valid() and contact_formset.is_valid():
+            with transaction.atomic():
+                company = form.save()
+                contact_formset.instance = company
+                contacts = contact_formset.save()
+                if contacts:
+                    if not any(contact.is_primary for contact in contacts):
+                        contacts[0].is_primary = True
+                        contacts[0].save(update_fields=['is_primary'])
+                    company.sync_primary_contact()
             messages.success(request, f'Company "{company.name}" added.')
             return redirect('staff_add_company')
     else:
         form = QuickCompanyForm()
+        contact_formset = CompanyContactFormSet(instance=company, prefix='contacts')
     recent = Company.objects.filter(is_archived=False).order_by('-created_at')[:5]
-    return render(request, 'core/admin_add_company.html', {'form': form, 'recent': recent})
+    return render(request, 'core/admin_add_company.html', {
+        'form': form,
+        'contact_formset': contact_formset,
+        'recent': recent,
+    })
 
 
 @staff_member_required
@@ -1285,6 +1304,7 @@ def staff_import_csv(request):
                         continue
                     try:
                         data = company_data_from_csv_row(row)
+                        contact_data = contacts_from_csv_row(row)
                     except ValueError as exc:
                         row_errors.append(f"Row {i}: skipped ({exc})")
                         skipped += 1
@@ -1299,18 +1319,22 @@ def staff_import_csv(request):
                             existing.archived_at = None
                             existing.archived_by = None
                             existing.save()
+                            if overwrite:
+                                replace_company_contacts(existing, contact_data)
                             restored += 1
                             continue
                         if overwrite:
                             for field, val in data.items():
                                 setattr(existing, field, val)
                             existing.save()
+                            replace_company_contacts(existing, contact_data)
                             updated += 1
                         else:
                             skipped += 1
                     else:
                         data['name'] = name
-                        Company.objects.create(**data)
+                        company = Company.objects.create(**data)
+                        replace_company_contacts(company, contact_data)
                         created += 1
 
                 summary = (

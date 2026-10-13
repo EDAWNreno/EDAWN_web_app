@@ -75,6 +75,48 @@ class Company(models.Model):
     def active_assignment(self):
         return self.assignments.filter(status=Assignment.STATUS_ACTIVE).first()
 
+    def sync_primary_contact(self):
+        """Keep legacy primary-contact fields aligned with structured contacts."""
+        primary = self.contacts.filter(is_primary=True).first() or self.contacts.first()
+        if primary is None:
+            if self.primary_contact_name or self.primary_contact_title:
+                self.primary_contact_name = ''
+                self.primary_contact_title = ''
+                self.save(update_fields=['primary_contact_name', 'primary_contact_title', 'updated_at'])
+            return
+        if not primary.is_primary:
+            self.contacts.filter(pk=primary.pk).update(is_primary=True)
+        if (
+            self.primary_contact_name != primary.name
+            or self.primary_contact_title != primary.title
+        ):
+            self.primary_contact_name = primary.name
+            self.primary_contact_title = primary.title
+            self.save(update_fields=['primary_contact_name', 'primary_contact_title', 'updated_at'])
+
+
+class CompanyContact(models.Model):
+    company    = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='contacts')
+    name       = models.CharField(max_length=100)
+    title      = models.CharField(max_length=100, blank=True)
+    email      = models.EmailField(blank=True)
+    phone      = models.CharField(max_length=50, blank=True)
+    is_primary = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-is_primary', 'name', 'pk']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['company'],
+                condition=Q(is_primary=True),
+                name='one_primary_contact_per_company',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.name} — {self.company.name}'
+
 
 class Assignment(models.Model):
     STATUS_ACTIVE    = 'active'

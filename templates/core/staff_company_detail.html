@@ -97,6 +97,23 @@
 
   <div class="col-xl-4">
     <div class="card mb-4">
+      <div class="card-header py-3"><i class="bi bi-people me-2"></i>Company Contacts</div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for contact in company.contacts.all %}
+          <li class="list-group-item">
+            <div class="fw-semibold">{{ contact.name }}{% if contact.is_primary %} <span class="badge bg-light text-dark">Primary</span>{% endif %}</div>
+            {% if contact.title %}<div class="text-muted small">{{ contact.title }}</div>{% endif %}
+            {% if contact.phone %}<div class="small"><a href="tel:{{ contact.phone }}">{{ contact.phone }}</a></div>{% endif %}
+            {% if contact.email %}<div class="small"><a href="mailto:{{ contact.email }}">{{ contact.email }}</a></div>{% endif %}
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted small">No contacts have been added.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    <div class="card mb-4">
       <div class="card-header py-3"><i class="bi bi-person-check me-2"></i>Current Assignment</div>
       <div class="card-body">
         {% if active_assignment %}

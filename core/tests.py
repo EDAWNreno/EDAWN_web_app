@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .emails import notify_invite
-from .models import Assignment, AssignmentRequest, Company, ContactAttempt, Message, VisitNote
+from .models import Assignment, AssignmentRequest, Company, CompanyContact, ContactAttempt, Message, VisitNote
 from .salesforce import sync_visit_to_salesforce
 
 
@@ -431,6 +431,10 @@ class CompanyManagementTests(TestCase):
 
         manual_response = self.client.post(reverse('staff_add_company'), {
             'name': 'New Manual Company',
+            'contacts-TOTAL_FORMS': '1',
+            'contacts-INITIAL_FORMS': '0',
+            'contacts-MIN_NUM_FORMS': '0',
+            'contacts-MAX_NUM_FORMS': '20',
         })
         csv_response = self.client.post(reverse('staff_import_csv'), {
             'csv_file': SimpleUploadedFile(
@@ -447,6 +451,113 @@ class CompanyManagementTests(TestCase):
         )
         self.assertFalse(
             Company.objects.get(name='New CSV Company').is_browse_visible,
+        )
+
+    def test_manual_add_accepts_multiple_company_contacts(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.post(reverse('staff_add_company'), {
+            'name': 'Multi Contact Company',
+            'contacts-TOTAL_FORMS': '2',
+            'contacts-INITIAL_FORMS': '0',
+            'contacts-MIN_NUM_FORMS': '0',
+            'contacts-MAX_NUM_FORMS': '20',
+            'contacts-0-name': 'Jordan Primary',
+            'contacts-0-title': 'President',
+            'contacts-0-email': 'jordan@example.com',
+            'contacts-0-phone': '775-555-0101',
+            'contacts-1-name': 'Alex Operations',
+            'contacts-1-title': 'Operations Manager',
+            'contacts-1-email': 'alex@example.com',
+            'contacts-1-phone': '775-555-0102',
+        })
+
+        self.assertRedirects(response, reverse('staff_add_company'))
+        company = Company.objects.get(name='Multi Contact Company')
+        self.assertEqual(company.contacts.count(), 2)
+        primary = company.contacts.get(is_primary=True)
+        self.assertEqual(primary.name, 'Jordan Primary')
+        self.assertEqual(company.primary_contact_name, 'Jordan Primary')
+
+        assignment = Assignment.objects.create(
+            company=company,
+            volunteer=self.volunteer,
+            assigned_by=self.staff,
+        )
+        volunteer_response = self.client.get(
+            reverse('company_detail', args=[assignment.pk]),
+        )
+        self.assertContains(volunteer_response, 'Jordan Primary')
+        self.assertContains(volunteer_response, 'Alex Operations')
+
+    def test_csv_import_accepts_numbered_company_contacts(self):
+        self.client.force_login(self.staff)
+        csv_content = (
+            b'name,contact_1_name,contact_1_title,contact_1_email,contact_1_phone,'
+            b'contact_2_name,contact_2_title,contact_2_email,contact_2_phone\n'
+            b'CSV Contacts Co,Pat Primary,Owner,pat@example.com,775-555-0201,'
+            b'Sam Sales,Sales Manager,sam@example.com,775-555-0202\n'
+        )
+
+        response = self.client.post(reverse('staff_import_csv'), {
+            'csv_file': SimpleUploadedFile(
+                'companies.csv',
+                csv_content,
+                content_type='text/csv',
+            ),
+        })
+
+        self.assertRedirects(response, reverse('staff_import_csv'))
+        company = Company.objects.get(name='CSV Contacts Co')
+        self.assertEqual(company.contacts.count(), 2)
+        self.assertEqual(company.contacts.get(is_primary=True).name, 'Pat Primary')
+        self.assertEqual(company.primary_contact_name, 'Pat Primary')
+        self.assertTrue(
+            CompanyContact.objects.filter(
+                company=company,
+                name='Sam Sales',
+                email='sam@example.com',
+            ).exists(),
+        )
+
+    def test_legacy_csv_contact_columns_create_structured_contact(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.post(reverse('staff_import_csv'), {
+            'csv_file': SimpleUploadedFile(
+                'companies.csv',
+                b'name,contact_name,contact_title\nLegacy Contact Co,Taylor Owner,Owner\n',
+                content_type='text/csv',
+            ),
+        })
+
+        self.assertRedirects(response, reverse('staff_import_csv'))
+        company = Company.objects.get(name='Legacy Contact Co')
+        contact = company.contacts.get()
+        self.assertEqual(contact.name, 'Taylor Owner')
+        self.assertEqual(contact.title, 'Owner')
+        self.assertTrue(contact.is_primary)
+
+    def test_csv_overwrite_without_contact_columns_preserves_contacts(self):
+        CompanyContact.objects.create(
+            company=self.company,
+            name='Existing Contact',
+            is_primary=True,
+        )
+        self.client.force_login(self.staff)
+
+        response = self.client.post(reverse('staff_import_csv'), {
+            'csv_file': SimpleUploadedFile(
+                'companies.csv',
+                f'name,industry\n{self.company.name},Technology\n'.encode(),
+                content_type='text/csv',
+            ),
+            'overwrite_existing': 'on',
+        })
+
+        self.assertRedirects(response, reverse('staff_import_csv'))
+        self.assertTrue(
+            self.company.contacts.filter(name='Existing Contact', is_primary=True).exists(),
         )
 
     def test_csv_import_accepts_last_visit_dates_and_updates_existing_company(self):

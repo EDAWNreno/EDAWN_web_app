@@ -75,15 +75,23 @@
           </dd>
           {% endif %}
 
-          {% if company.primary_contact_name %}
-          <dt class="col-5 text-muted">Contact</dt>
+          {% for contact in company.contacts.all %}
+          <dt class="col-5 text-muted">{% if forloop.first %}Contacts{% endif %}</dt>
           <dd class="col-7">
-            {{ company.primary_contact_name }}
-            {% if company.primary_contact_title %}
-            <br><span class="text-muted">{{ company.primary_contact_title }}</span>
-            {% endif %}
+            {{ contact.name }}{% if contact.is_primary %} <span class="badge bg-light text-dark">Primary</span>{% endif %}
+            {% if contact.title %}<br><span class="text-muted">{{ contact.title }}</span>{% endif %}
+            {% if contact.phone %}<br><a href="tel:{{ contact.phone }}">{{ contact.phone }}</a>{% endif %}
+            {% if contact.email %}<br><a href="mailto:{{ contact.email }}">{{ contact.email }}</a>{% endif %}
           </dd>
-          {% endif %}
+          {% empty %}
+            {% if company.primary_contact_name %}
+            <dt class="col-5 text-muted">Contact</dt>
+            <dd class="col-7">
+              {{ company.primary_contact_name }}
+              {% if company.primary_contact_title %}<br><span class="text-muted">{{ company.primary_contact_title }}</span>{% endif %}
+            </dd>
+            {% endif %}
+          {% endfor %}
         </dl>
       </div>
     </div>

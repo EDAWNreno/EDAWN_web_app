@@ -27,13 +27,9 @@
             {% endfor %}
           </div>
           <div class="row g-3 mb-3">
-            <div class="col-md-6">
+            <div class="col-12">
               <label class="form-label fw-semibold">Industry</label>
               {{ form.industry }}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">Primary Contact</label>
-              {{ form.primary_contact_name }}
             </div>
           </div>
           <div class="mb-3">
@@ -64,6 +60,54 @@
               {{ form.email }}
             </div>
           </div>
+
+          <div class="border rounded p-3 mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div>
+                <div class="fw-semibold"><i class="bi bi-people me-1"></i>Company Contacts</div>
+                <div class="text-muted small">Add as many contacts as needed. The first contact is primary unless another is selected.</div>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-primary" id="add-contact">
+                <i class="bi bi-person-plus me-1"></i>Add Contact
+              </button>
+            </div>
+            {{ contact_formset.management_form }}
+            {% if contact_formset.non_form_errors %}
+            <div class="alert alert-danger py-2 small">{{ contact_formset.non_form_errors }}</div>
+            {% endif %}
+            <div id="contact-forms" class="d-grid gap-3">
+              {% for contact_form in contact_formset %}
+              <div class="contact-form border rounded p-3">
+                {{ contact_form.id }}
+                <div class="row g-2">
+                  <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Name</label>{{ contact_form.name }}
+                    {% for error in contact_form.name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Title</label>{{ contact_form.title }}
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Email</label>{{ contact_form.email }}
+                    {% for error in contact_form.email.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Phone</label>{{ contact_form.phone }}
+                  </div>
+                  <div class="col-12 d-flex justify-content-between align-items-center">
+                    <div class="form-check">
+                      {{ contact_form.is_primary }}
+                      <label class="form-check-label small" for="{{ contact_form.is_primary.id_for_label }}">Primary contact</label>
+                    </div>
+                    <div class="d-none">{{ contact_form.DELETE }}</div>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-contact">Remove</button>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
           <div class="form-check mb-3">
             {{ form.is_browse_visible }}
             <label class="form-check-label fw-semibold" for="{{ form.is_browse_visible.id_for_label }}">
@@ -108,4 +152,57 @@
     </div>
   </div>
 </div>
+
+<template id="empty-contact-form">
+  <div class="contact-form border rounded p-3">
+    {{ contact_formset.empty_form.id }}
+    <div class="row g-2">
+      <div class="col-md-6"><label class="form-label small fw-semibold">Name</label>{{ contact_formset.empty_form.name }}</div>
+      <div class="col-md-6"><label class="form-label small fw-semibold">Title</label>{{ contact_formset.empty_form.title }}</div>
+      <div class="col-md-6"><label class="form-label small fw-semibold">Email</label>{{ contact_formset.empty_form.email }}</div>
+      <div class="col-md-6"><label class="form-label small fw-semibold">Phone</label>{{ contact_formset.empty_form.phone }}</div>
+      <div class="col-12 d-flex justify-content-between align-items-center">
+        <div class="form-check">{{ contact_formset.empty_form.is_primary }}<label class="form-check-label small" for="{{ contact_formset.empty_form.is_primary.id_for_label }}">Primary contact</label></div>
+        <div class="d-none">{{ contact_formset.empty_form.DELETE }}</div>
+        <button type="button" class="btn btn-sm btn-outline-danger remove-contact">Remove</button>
+      </div>
+    </div>
+  </div>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const contactForms = document.getElementById('contact-forms');
+  const totalForms = document.getElementById('id_contacts-TOTAL_FORMS');
+  const emptyContactForm = document.getElementById('empty-contact-form');
+
+  function wireContactRow(row) {
+    row.querySelector('.remove-contact').addEventListener('click', () => {
+      const deleteField = row.querySelector('input[name$="-DELETE"]');
+      if (deleteField) deleteField.checked = true;
+      row.classList.add('d-none');
+    });
+    const primaryField = row.querySelector('input[name$="-is_primary"]');
+    if (primaryField) {
+      primaryField.addEventListener('change', () => {
+        if (!primaryField.checked) return;
+        document.querySelectorAll('input[name$="-is_primary"]').forEach(field => {
+          if (field !== primaryField) field.checked = false;
+        });
+      });
+    }
+  }
+
+  document.querySelectorAll('.contact-form').forEach(wireContactRow);
+  document.getElementById('add-contact').addEventListener('click', () => {
+    const index = Number(totalForms.value);
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = emptyContactForm.innerHTML.replaceAll('__prefix__', index).trim();
+    const row = wrapper.firstElementChild;
+    contactForms.appendChild(row);
+    totalForms.value = index + 1;
+    wireContactRow(row);
+  });
+</script>
 {% endblock %}

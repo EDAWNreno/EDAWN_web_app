@@ -1,7 +1,8 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
-from .models import Assignment, AssignmentRequest, Company, ContactAttempt, InviteCode, Notice, Resource, VisitNote, Message, Reply
+from django.forms import BaseInlineFormSet, inlineformset_factory
+from .models import Assignment, AssignmentRequest, Company, CompanyContact, ContactAttempt, InviteCode, Notice, Resource, VisitNote, Message, Reply
 
 _fc = {'class': 'form-control'}
 _fs = {'class': 'form-select'}
@@ -269,7 +270,7 @@ class QuickCompanyForm(forms.ModelForm):
     class Meta:
         model  = Company
         fields = ('name', 'industry', 'address', 'city', 'state', 'zip_code', 'phone', 'email',
-                  'primary_contact_name', 'is_browse_visible')
+                  'is_browse_visible')
         widgets = {
             'name':                 forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Company name'}),
             'industry':             forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Industry'}),
@@ -279,9 +280,47 @@ class QuickCompanyForm(forms.ModelForm):
             'zip_code':             forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Zip code'}),
             'phone':                forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Phone'}),
             'email':                forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email'}),
-            'primary_contact_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Contact name'}),
             'is_browse_visible':    forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+
+class CompanyContactForm(forms.ModelForm):
+    class Meta:
+        model = CompanyContact
+        fields = ('name', 'title', 'email', 'phone', 'is_primary')
+        widgets = {
+            'name': forms.TextInput(attrs={**_fc, 'placeholder': 'Contact name'}),
+            'title': forms.TextInput(attrs={**_fc, 'placeholder': 'Title'}),
+            'email': forms.EmailInput(attrs={**_fc, 'placeholder': 'Email'}),
+            'phone': forms.TextInput(attrs={**_fc, 'placeholder': 'Phone'}),
+            'is_primary': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+
+class BaseCompanyContactFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+        primary_count = sum(
+            1 for form in self.forms
+            if form.cleaned_data
+            and not form.cleaned_data.get('DELETE')
+            and form.cleaned_data.get('name')
+            and form.cleaned_data.get('is_primary')
+        )
+        if primary_count > 1:
+            raise forms.ValidationError('Select only one primary contact.')
+
+
+CompanyContactFormSet = inlineformset_factory(
+    Company,
+    CompanyContact,
+    form=CompanyContactForm,
+    formset=BaseCompanyContactFormSet,
+    extra=1,
+    can_delete=True,
+    max_num=20,
+    validate_max=True,
+)
 
 
 class CompanyManagementForm(forms.ModelForm):
@@ -332,6 +371,22 @@ class CompanyManagementForm(forms.ModelForm):
             )
         return status
 
+    def save(self, commit=True):
+        company = super().save(commit=commit)
+        if commit and company.primary_contact_name:
+            primary = company.contacts.filter(is_primary=True).first()
+            if primary:
+                primary.name = company.primary_contact_name
+                primary.title = company.primary_contact_title
+                primary.save(update_fields=['name', 'title'])
+            elif not company.contacts.exists():
+                company.contacts.create(
+                    name=company.primary_contact_name,
+                    title=company.primary_contact_title,
+                    is_primary=True,
+                )
+        return company
+
 
 class _CompanyWithIndustryField(forms.ModelChoiceField):
     def label_from_instance(self, obj):
@@ -373,7 +428,9 @@ class CompanyCSVUploadForm(forms.Form):
             'Required column: <strong>name</strong>. '
             'Optional: address, city, state, zip_code, phone, email, website, '
             'industry, primary_contact_name, primary_contact_title, notes, '
-            'last_visit_date'
+            'last_visit_date, and numbered contact columns such as '
+            'contact_1_name, contact_1_title, contact_1_email, contact_1_phone, '
+            'contact_2_name, etc.'
         ),
         widget=forms.FileInput(attrs={'accept': '.csv', 'class': 'form-control'}),
     )
