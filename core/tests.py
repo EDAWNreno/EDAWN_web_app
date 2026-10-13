@@ -833,6 +833,77 @@ class CompanyManagementTests(TestCase):
         self.assertEqual(assignment.status, Assignment.STATUS_COMPLETED)
         self.assertEqual(self.company.status, Company.STATUS_VISITED)
 
+    def test_reopening_lost_assignment_preserves_contact_attempt_history(self):
+        assignment = Assignment.objects.create(
+            company=self.company,
+            volunteer=self.volunteer,
+            assigned_by=self.staff,
+        )
+        for number in range(1, 4):
+            ContactAttempt.objects.create(
+                assignment=assignment,
+                attempted_by=self.volunteer,
+                method='phone',
+                notes=f'Historical contact note {number}.',
+            )
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.status, Assignment.STATUS_LOST)
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            reverse('staff_reopen_assignment', args=[assignment.pk]),
+        )
+
+        assignment.refresh_from_db()
+        reopened_assignment = Assignment.objects.get(
+            company=self.company,
+            status=Assignment.STATUS_ACTIVE,
+        )
+        self.assertRedirects(
+            response,
+            reverse('company_detail', args=[reopened_assignment.pk]),
+        )
+        self.assertEqual(assignment.status, Assignment.STATUS_LOST)
+        self.assertEqual(assignment.contact_attempts.count(), 3)
+        self.assertContains(
+            self.client.get(reverse('company_detail', args=[reopened_assignment.pk])),
+            'Historical contact note 1.',
+        )
+
+        ContactAttempt.objects.create(
+            assignment=reopened_assignment,
+            attempted_by=self.volunteer,
+            method='email',
+            notes='First attempt in the new cycle.',
+        )
+        reopened_assignment.refresh_from_db()
+        self.assertEqual(reopened_assignment.status, Assignment.STATUS_ACTIVE)
+        self.assertEqual(reopened_assignment.contact_attempts.count(), 1)
+
+    def test_django_admin_cannot_delete_history_owners(self):
+        assignment = Assignment.objects.create(
+            company=self.company,
+            volunteer=self.volunteer,
+            assigned_by=self.staff,
+        )
+        self.staff.is_superuser = True
+        self.staff.save(update_fields=['is_superuser'])
+        self.client.force_login(self.staff)
+
+        user_delete = self.client.get(
+            reverse('admin:auth_user_delete', args=[self.volunteer.pk]),
+        )
+        company_delete = self.client.get(
+            reverse('admin:core_company_delete', args=[self.company.pk]),
+        )
+        assignment_delete = self.client.get(
+            reverse('admin:core_assignment_delete', args=[assignment.pk]),
+        )
+
+        self.assertEqual(user_delete.status_code, 403)
+        self.assertEqual(company_delete.status_code, 403)
+        self.assertEqual(assignment_delete.status_code, 403)
+
     def test_staff_can_click_a_volunteer_and_see_visit_totals(self):
         self.volunteer.last_login = timezone.now() - timedelta(days=2)
         self.volunteer.save(update_fields=['last_login'])

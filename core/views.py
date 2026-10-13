@@ -1816,17 +1816,38 @@ def staff_guide(request):
 def staff_reopen_assignment(request, pk):
     if request.method != 'POST':
         return redirect('company_detail', pk=pk)
-    assignment = get_object_or_404(Assignment, pk=pk)
-    if assignment.status != Assignment.STATUS_LOST:
-        messages.error(request, "Only lost assignments can be reopened.")
-        return redirect('company_detail', pk=pk)
-    assignment.contact_attempts.all().delete()
-    assignment.status = Assignment.STATUS_ACTIVE
-    assignment.save(update_fields=['status'])
-    assignment.company.status = Company.STATUS_ASSIGNED
-    assignment.company.save(update_fields=['status'])
-    messages.success(request, f'"{assignment.company.name}" has been reopened and assigned back to {assignment.volunteer.get_full_name() or assignment.volunteer.username}.')
-    return redirect('company_detail', pk=pk)
+    with transaction.atomic():
+        assignment = get_object_or_404(
+            Assignment.objects.select_for_update().select_related('company', 'volunteer'),
+            pk=pk,
+        )
+        if assignment.status != Assignment.STATUS_LOST:
+            messages.error(request, "Only lost assignments can be reopened.")
+            return redirect('company_detail', pk=pk)
+        if Assignment.objects.filter(
+            company=assignment.company,
+            status=Assignment.STATUS_ACTIVE,
+        ).exists():
+            messages.error(request, "This company already has an active assignment.")
+            return redirect('company_detail', pk=pk)
+
+        # Start a fresh attempt cycle without erasing the prior assignment's
+        # contact history. The lost assignment remains as an immutable record.
+        reopened_assignment = Assignment.objects.create(
+            company=assignment.company,
+            volunteer=assignment.volunteer,
+            assigned_by=request.user,
+        )
+        assignment.company.status = Company.STATUS_ASSIGNED
+        assignment.company.save(update_fields=['status'])
+
+    volunteer_name = assignment.volunteer.get_full_name() or assignment.volunteer.username
+    messages.success(
+        request,
+        f'"{assignment.company.name}" has been reopened and assigned back to '
+        f'{volunteer_name}. Previous contact attempts were preserved.',
+    )
+    return redirect('company_detail', pk=reopened_assignment.pk)
 
 
 @staff_member_required

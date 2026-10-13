@@ -103,6 +103,11 @@ class CustomUserAdmin(UserAdmin):
                      'is_active', 'last_login', 'last_visit_col', 'visit_count_col', 'inactivity_flag_col')
     list_filter   = UserAdmin.list_filter + ('last_login',)
 
+    def has_delete_permission(self, request, obj=None):
+        # Volunteer accounts are deactivated through the staff portal so their
+        # assignment, visit, and contact-attempt history remains intact.
+        return False
+
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.annotate(
@@ -241,6 +246,7 @@ class AssignmentInline(admin.TabularInline):
     fields              = ('volunteer', 'status', 'assigned_by', 'assigned_date', 'completed_date',
                            'unassigned_at', 'unassigned_by')
     show_change_link    = True
+    can_delete          = False
 
 
 # ---------------------------------------------------------------------------
@@ -256,6 +262,10 @@ class CompanyAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at', 'updated_at')
     ordering       = ('name',)
     inlines        = [AssignmentInline]
+
+    def has_delete_permission(self, request, obj=None):
+        # Use the archive workflow; deleting a company cascades to its history.
+        return False
     fieldsets = (
         ('Company Info', {
             'fields': ('name', 'industry', 'status', 'imported_last_visit_date', 'is_browse_visible', 'notes'),
@@ -380,6 +390,10 @@ class AssignmentAdmin(admin.ModelAdmin):
     readonly_fields = ('assigned_date', 'completed_date', 'unassigned_at', 'unassigned_by')
     ordering       = ('-assigned_date',)
     inlines        = [ContactAttemptInline, VisitNoteInline]
+
+    def has_delete_permission(self, request, obj=None):
+        # Use unassign/reopen workflows; deletion cascades to activity history.
+        return False
 
     @admin.display(description='Attempts')
     def attempt_count(self, obj):

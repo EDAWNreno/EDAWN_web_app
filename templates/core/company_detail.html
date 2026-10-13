@@ -157,7 +157,7 @@
         <form method="post" action="{% url 'staff_reopen_assignment' assignment.pk %}" class="mt-3">
           {% csrf_token %}
           <button type="submit" class="btn btn-sm btn-outline-danger"
-                  onclick="return confirm('Reopen this assignment? All contact attempts will be cleared.')">
+                  onclick="return confirm('Reopen this assignment? Previous contact attempts will be preserved and a new assignment will be started.')">
             <i class="bi bi-arrow-counterclockwise me-1"></i>Reopen Assignment
           </button>
         </form>
