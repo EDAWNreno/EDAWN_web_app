@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -834,6 +834,8 @@ class CompanyManagementTests(TestCase):
         self.assertEqual(self.company.status, Company.STATUS_VISITED)
 
     def test_staff_can_click_a_volunteer_and_see_visit_totals(self):
+        self.volunteer.last_login = timezone.now() - timedelta(days=2)
+        self.volunteer.save(update_fields=['last_login'])
         assignment = Assignment.objects.create(
             company=self.company,
             volunteer=self.volunteer,
@@ -862,6 +864,15 @@ class CompanyManagementTests(TestCase):
         self.assertContains(detail_response, 'Visit Completed')
         self.assertContains(detail_response, 'Visit Report')
         self.assertContains(detail_response, 'Acme Manufacturing')
+        self.assertContains(detail_response, 'Last login:')
+        self.assertNotContains(detail_response, 'Never signed in')
+
+        self.volunteer.last_login = None
+        self.volunteer.save(update_fields=['last_login'])
+        never_signed_in_response = self.client.get(
+            reverse('staff_volunteer_detail', args=[self.volunteer.pk]),
+        )
+        self.assertContains(never_signed_in_response, 'Never signed in')
 
         self.client.force_login(self.volunteer)
         denied_response = self.client.get(
