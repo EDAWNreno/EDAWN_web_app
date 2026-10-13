@@ -90,6 +90,28 @@
   </div>
 </div>
 
+<div class="card mb-4">
+  <div class="card-header py-3"><i class="bi bi-telephone me-2"></i>Contact Attempt History</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0 small">
+        <thead class="table-light"><tr><th>Date</th><th>Company</th><th>Method</th><th>Notes</th><th></th></tr></thead>
+        <tbody>
+          {% for attempt in contact_attempts %}
+          <tr>
+            <td>{{ attempt.attempt_date|date:"M j, Y g:i A" }}</td>
+            <td class="fw-semibold">{{ attempt.assignment.company.name }}</td>
+            <td>{{ attempt.get_method_display }}</td>
+            <td>{{ attempt.notes|default:"—"|linebreaksbr }}</td>
+            <td class="text-end"><a href="{% url 'company_detail' attempt.assignment.pk %}" class="btn btn-sm btn-outline-secondary">Open</a></td>
+          </tr>
+          {% empty %}<tr><td colspan="5" class="text-center text-muted py-4">No contact attempts.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <div class="card">
   <div class="card-header py-3"><i class="bi bi-journal-check me-2"></i>Visit Reports</div>
   <div class="card-body p-0">

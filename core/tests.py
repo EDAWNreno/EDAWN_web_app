@@ -963,6 +963,44 @@ class CompanyManagementTests(TestCase):
         self.assertEqual(export_response['Content-Type'], 'text/csv')
         self.assertContains(export_response, 'Visit by a volunteer who was later removed.')
 
+    def test_removed_volunteer_contact_attempt_notes_remain_visible_to_staff(self):
+        assignment = Assignment.objects.create(
+            company=self.company,
+            volunteer=self.volunteer,
+            assigned_by=self.staff,
+        )
+        ContactAttempt.objects.create(
+            assignment=assignment,
+            attempted_by=self.volunteer,
+            method='phone',
+            notes='Spoke with Pat about scheduling a November visit.',
+        )
+        self.client.force_login(self.staff)
+
+        remove_response = self.client.post(
+            reverse('staff_remove_volunteer', args=[self.volunteer.pk]),
+        )
+        profile_response = self.client.get(
+            reverse('staff_volunteer_detail', args=[self.volunteer.pk]),
+        )
+        company_response = self.client.get(
+            reverse('staff_company_detail', args=[self.company.pk]),
+        )
+
+        self.assertRedirects(remove_response, reverse('staff_volunteers'))
+        self.volunteer.refresh_from_db()
+        self.assertFalse(self.volunteer.is_active)
+        self.assertContains(profile_response, 'Contact Attempt History')
+        self.assertContains(
+            profile_response,
+            'Spoke with Pat about scheduling a November visit.',
+        )
+        self.assertContains(
+            company_response,
+            'Spoke with Pat about scheduling a November visit.',
+        )
+        self.assertContains(company_response, self.volunteer.get_full_name())
+
 
 @override_settings(
     EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',

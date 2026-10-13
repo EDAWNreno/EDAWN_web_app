@@ -237,6 +237,16 @@
               <span class="fw-semibold">{{ attempt.get_method_display }}</span>
               <span class="text-muted">{{ attempt.attempt_date|date:"M j, Y" }}</span>
             </div>
+            <div class="small mt-1">
+              by
+              {% if not attempt.attempted_by.is_staff %}
+              <a href="{% url 'staff_volunteer_detail' attempt.attempted_by.pk %}" class="text-decoration-none">
+                {{ attempt.attempted_by.get_full_name|default:attempt.attempted_by.username }}
+              </a>
+              {% else %}
+              {{ attempt.attempted_by.get_full_name|default:attempt.attempted_by.username }}
+              {% endif %}
+            </div>
             {% if attempt.notes %}<div class="small text-muted mt-1">{{ attempt.notes|linebreaksbr }}</div>{% endif %}
           </li>
           {% empty %}<li class="list-group-item text-muted text-center py-4">No contact attempts.</li>{% endfor %}

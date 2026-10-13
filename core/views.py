@@ -1247,10 +1247,17 @@ def staff_volunteer_detail(request, pk):
         .select_related('assignment__company')
         .order_by('-visit_date')
     )
+    contact_attempts = (
+        ContactAttempt.objects
+        .filter(attempted_by=volunteer)
+        .select_related('assignment__company')
+        .order_by('-attempt_date')
+    )
     return render(request, 'core/staff_volunteer_detail.html', {
         'volunteer': volunteer,
         'assignments': assignments,
         'visit_notes': visit_notes,
+        'contact_attempts': contact_attempts,
         'visit_count': assignments.filter(status=Assignment.STATUS_COMPLETED).count(),
         'visit_report_count': visit_notes.count(),
         'active_count': assignments.filter(status=Assignment.STATUS_ACTIVE).count(),
