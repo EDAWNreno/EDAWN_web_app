@@ -172,7 +172,15 @@
             <td>
               {% with assignment=company.active_assignments.0 %}
                 {% if assignment %}
-                <div class="small fw-semibold">{{ assignment.volunteer.get_full_name|default:assignment.volunteer.username }}</div>
+                <div class="small fw-semibold">
+                  {% if not assignment.volunteer.is_staff %}
+                  <a href="{% url 'staff_volunteer_detail' assignment.volunteer.pk %}" class="text-decoration-none">
+                    {{ assignment.volunteer.get_full_name|default:assignment.volunteer.username }}
+                  </a>
+                  {% else %}
+                  {{ assignment.volunteer.get_full_name|default:assignment.volunteer.username }}
+                  {% endif %}
+                </div>
                 {% if assignment.volunteer.is_staff %}<span class="badge bg-secondary">Admin</span>{% endif %}
                 <div class="text-muted" style="font-size:.75rem;">since {{ assignment.assigned_date|date:"M j, Y" }}</div>
                 {% else %}<span class="text-muted">—</span>{% endif %}

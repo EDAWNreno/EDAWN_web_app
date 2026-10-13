@@ -833,6 +833,125 @@ class CompanyManagementTests(TestCase):
         self.assertEqual(assignment.status, Assignment.STATUS_COMPLETED)
         self.assertEqual(self.company.status, Company.STATUS_VISITED)
 
+    def test_staff_can_click_a_volunteer_and_see_visit_totals(self):
+        assignment = Assignment.objects.create(
+            company=self.company,
+            volunteer=self.volunteer,
+            assigned_by=self.staff,
+            status=Assignment.STATUS_COMPLETED,
+            completed_date=timezone.now(),
+        )
+        VisitNote.objects.create(
+            assignment=assignment,
+            visited_by=self.volunteer,
+            notes='Completed a workforce visit.',
+        )
+        self.client.force_login(self.staff)
+
+        roster_response = self.client.get(reverse('staff_volunteers'))
+        detail_response = self.client.get(
+            reverse('staff_volunteer_detail', args=[self.volunteer.pk]),
+        )
+
+        self.assertContains(
+            roster_response,
+            reverse('staff_volunteer_detail', args=[self.volunteer.pk]),
+        )
+        self.assertEqual(detail_response.context['visit_count'], 1)
+        self.assertEqual(detail_response.context['visit_report_count'], 1)
+        self.assertContains(detail_response, 'Visit Completed')
+        self.assertContains(detail_response, 'Visit Report')
+        self.assertContains(detail_response, 'Acme Manufacturing')
+
+        self.client.force_login(self.volunteer)
+        denied_response = self.client.get(
+            reverse('staff_volunteer_detail', args=[self.volunteer.pk]),
+        )
+        self.assertEqual(denied_response.status_code, 302)
+        self.assertIn('/admin/login/', denied_response.url)
+
+    def test_reassigned_company_notes_are_visible_to_staff_and_new_volunteer(self):
+        old_assignment = Assignment.objects.create(
+            company=self.company,
+            volunteer=self.volunteer,
+            assigned_by=self.staff,
+        )
+        ContactAttempt.objects.create(
+            assignment=old_assignment,
+            attempted_by=self.volunteer,
+            method='phone',
+            notes='Prior volunteer left a detailed voicemail.',
+        )
+        self.client.force_login(self.staff)
+        self.client.post(reverse('staff_unassign_assignment', args=[old_assignment.pk]))
+
+        new_volunteer = User.objects.create_user(
+            username='new-volunteer',
+            password='test-pass',
+            first_name='New',
+            last_name='Volunteer',
+        )
+        new_assignment = Assignment.objects.create(
+            company=self.company,
+            volunteer=new_volunteer,
+            assigned_by=self.staff,
+        )
+        self.company.status = Company.STATUS_ASSIGNED
+        self.company.save(update_fields=['status'])
+        ContactAttempt.objects.create(
+            assignment=new_assignment,
+            attempted_by=new_volunteer,
+            method='email',
+            notes='New volunteer sent an introduction.',
+        )
+
+        staff_response = self.client.get(
+            reverse('company_detail', args=[new_assignment.pk]),
+        )
+        self.assertContains(staff_response, 'Prior volunteer left a detailed voicemail.')
+
+        self.client.force_login(new_volunteer)
+        new_volunteer_response = self.client.get(
+            reverse('company_detail', args=[new_assignment.pk]),
+        )
+        self.assertContains(new_volunteer_response, 'Prior volunteer left a detailed voicemail.')
+        self.assertContains(new_volunteer_response, 'New volunteer sent an introduction.')
+        self.assertContains(new_volunteer_response, '1 / 3')
+
+        self.client.force_login(self.volunteer)
+        former_volunteer_response = self.client.get(
+            reverse('company_detail', args=[old_assignment.pk]),
+        )
+        self.assertContains(former_volunteer_response, 'Prior volunteer left a detailed voicemail.')
+        self.assertNotContains(former_volunteer_response, 'New volunteer sent an introduction.')
+
+    def test_removed_volunteer_remains_available_on_export_page(self):
+        assignment = Assignment.objects.create(
+            company=self.company,
+            volunteer=self.volunteer,
+            assigned_by=self.staff,
+            status=Assignment.STATUS_COMPLETED,
+            completed_date=timezone.now(),
+        )
+        VisitNote.objects.create(
+            assignment=assignment,
+            visited_by=self.volunteer,
+            notes='Visit by a volunteer who was later removed.',
+        )
+        self.volunteer.is_active = False
+        self.volunteer.save(update_fields=['is_active'])
+        self.client.force_login(self.staff)
+
+        page_response = self.client.get(reverse('staff_export_visits'))
+        export_response = self.client.get(reverse('staff_export_visits'), {
+            'volunteer': self.volunteer.pk,
+        })
+
+        self.assertContains(page_response, self.volunteer.username)
+        self.assertEqual(export_response.status_code, 200)
+        self.assertEqual(export_response['Content-Type'], 'text/csv')
+        self.assertContains(export_response, 'Visit by a volunteer who was later removed.')
+
 
 @override_settings(
     EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',

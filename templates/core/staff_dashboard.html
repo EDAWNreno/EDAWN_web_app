@@ -152,7 +152,15 @@
                 </a>
               </td>
               <td class="text-muted small">{{ a.company.industry|default:"—" }}</td>
-              <td class="text-muted">{{ a.volunteer.get_full_name|default:a.volunteer.username }}</td>
+              <td>
+                {% if not a.volunteer.is_staff %}
+                <a href="{% url 'staff_volunteer_detail' a.volunteer.pk %}" class="text-decoration-none">
+                  {{ a.volunteer.get_full_name|default:a.volunteer.username }}
+                </a>
+                {% else %}
+                <span class="text-muted">{{ a.volunteer.get_full_name|default:a.volunteer.username }}</span>
+                {% endif %}
+              </td>
               <td>
                 {% if a.status == 'active' %}
                   <span class="badge rounded-pill" style="background:var(--edawn-teal);">Active</span>

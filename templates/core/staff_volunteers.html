@@ -67,7 +67,11 @@
         {% for vol in volunteers %}
         <tr>
           <td>
-            <div class="fw-semibold">{{ vol.get_full_name|default:vol.username }}</div>
+            <div class="fw-semibold">
+              <a href="{% url 'staff_volunteer_detail' vol.pk %}" class="text-decoration-none">
+                {{ vol.get_full_name|default:vol.username }}
+              </a>
+            </div>
             <div class="text-muted small">{{ vol.email }}</div>
             <form method="post" action="{% url 'staff_set_temp_password' vol.pk %}"
                   style="display:inline;"

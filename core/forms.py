@@ -428,7 +428,7 @@ class VisitExportForm(forms.Form):
     volunteer = forms.ModelChoiceField(
         required=False,
         label='Volunteer',
-        queryset=User.objects.filter(is_active=True, is_staff=False).order_by('first_name', 'last_name'),
+        queryset=User.objects.filter(is_staff=False).order_by('first_name', 'last_name', 'username'),
         empty_label='All volunteers',
         widget=forms.Select(attrs={'class': 'form-select form-select-sm'}),
     )

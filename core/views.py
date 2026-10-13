@@ -755,9 +755,29 @@ def company_list(request):
 
 @login_required
 def company_detail(request, pk):
-    assignment       = _get_assignment(pk, request.user)
-    contact_attempts = list(assignment.contact_attempts.all())
-    visit_notes      = assignment.visit_notes.all()
+    assignment = _get_assignment(pk, request.user)
+    current_contact_attempts = assignment.contact_attempts.count()
+
+    # Carry company history forward when a company is reassigned.  Limiting
+    # non-staff users to assignments created no later than their own prevents a
+    # former assignee from seeing activity added after they were removed.
+    company_history = Assignment.objects.filter(company=assignment.company)
+    if not request.user.is_staff:
+        company_history = company_history.filter(
+            assigned_date__lte=assignment.assigned_date,
+        )
+    contact_attempts = (
+        ContactAttempt.objects
+        .filter(assignment__in=company_history)
+        .select_related('assignment', 'attempted_by')
+        .order_by('-attempt_date')
+    )
+    visit_notes = (
+        VisitNote.objects
+        .filter(assignment__in=company_history)
+        .select_related('assignment', 'visited_by')
+        .order_by('-visit_date')
+    )
 
     context = {
         'assignment':         assignment,
@@ -765,8 +785,8 @@ def company_detail(request, pk):
         'contact_attempts':   contact_attempts,
         'visit_notes':        visit_notes,
         'contact_form':       ContactAttemptForm(),
-        'attempts_remaining': max(0, 3 - len(contact_attempts)),
-        'contact_attempts_count': len(contact_attempts),
+        'attempts_remaining': max(0, 3 - current_contact_attempts),
+        'contact_attempts_count': current_contact_attempts,
         'is_owner':           request.user == assignment.volunteer,
     }
     return render(request, 'core/company_detail.html', context)
@@ -1203,6 +1223,39 @@ def staff_volunteers(request):
         'bbv_overdue_count': _bbv_overdue_count(cutoff_90),
     }
     return render(request, 'core/staff_volunteers.html', context)
+
+
+@staff_member_required
+def staff_volunteer_detail(request, pk):
+    volunteer = get_object_or_404(
+        User.objects.select_related('profile'),
+        pk=pk,
+        is_staff=False,
+    )
+    assignments = (
+        volunteer.assignments
+        .select_related('company')
+        .annotate(
+            attempt_count=Count('contact_attempts', distinct=True),
+            visit_report_count=Count('visit_notes', distinct=True),
+        )
+        .order_by('-assigned_date')
+    )
+    visit_notes = (
+        VisitNote.objects
+        .filter(visited_by=volunteer)
+        .select_related('assignment__company')
+        .order_by('-visit_date')
+    )
+    return render(request, 'core/staff_volunteer_detail.html', {
+        'volunteer': volunteer,
+        'assignments': assignments,
+        'visit_notes': visit_notes,
+        'visit_count': assignments.filter(status=Assignment.STATUS_COMPLETED).count(),
+        'visit_report_count': visit_notes.count(),
+        'active_count': assignments.filter(status=Assignment.STATUS_ACTIVE).count(),
+        'lost_count': assignments.filter(status=Assignment.STATUS_LOST).count(),
+    })
 
 
 @staff_member_required
