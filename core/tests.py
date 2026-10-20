@@ -615,6 +615,88 @@ class CompanyManagementTests(TestCase):
             date(2023, 7, 18),
         )
 
+    def _post_import_csv(self, content, **extra):
+        self.client.force_login(self.staff)
+        return self.client.post(reverse('staff_import_csv'), {
+            'csv_file': SimpleUploadedFile('companies.csv', content, content_type='text/csv'),
+            **extra,
+        }, follow=True)
+
+    def test_csv_import_without_name_column_explains_header_problem(self):
+        response = self._post_import_csv(
+            b'Company Name,Street Address,Most Recent Visit Date\n'
+            b'Header Problem Co,1 Main St,1/2/2025\n'
+        )
+
+        self.assertContains(response, 'this file has no &quot;name&quot; column')
+        self.assertContains(response, '&quot;Company Name&quot; (rename to name)')
+        self.assertContains(response, '&quot;Street Address&quot; (rename to address)')
+        self.assertContains(response, '(rename to last_visit_date)')
+        self.assertNotContains(response, 'Import complete')
+        self.assertFalse(Company.objects.filter(name='Header Problem Co').exists())
+
+    def test_csv_import_suggests_lowercase_for_miscased_headers(self):
+        response = self._post_import_csv(b'Name\nMiscased Co\n')
+
+        self.assertContains(response, '&quot;Name&quot; (rename to name)')
+
+    def test_csv_import_lists_every_skipped_row_with_company_and_reason(self):
+        response = self._post_import_csv(
+            b'name,last_visit_date,contact_1_name,contact_1_email,contact_1_phone\n'
+            b'Good Row Co,1/2/2025,Pat Lee,pat@example.com,\n'
+            b'Bad Date Co,7/23/205,,,\n'
+            b'No Contact Name Co,,,,775-555-0100\n'
+            b'Bad Email Co,,Sam Ray,not-an-email,\n'
+            b',,,,775-555-0199\n'
+            b',,,,\n'
+        )
+
+        self.assertContains(response, 'Import complete: 1 created, 0 updated, 0 restored, 4 skipped.')
+        self.assertContains(response, '4 rows skipped because of problems')
+        self.assertContains(response, 'Row 3 (Bad Date Co): last visit date &quot;7/23/205&quot; is not a valid date')
+        self.assertContains(response, 'Row 4 (No Contact Name Co): contact 1 has a title, email, or phone but no name')
+        self.assertContains(response, 'Row 5 (Bad Email Co): contact 1 email &quot;not-an-email&quot; is not a valid email address')
+        self.assertContains(response, 'Row 6: company name is blank')
+        self.assertNotContains(response, 'Row 7')
+        self.assertContains(response, '<li>', count=4)
+        self.assertTrue(Company.objects.filter(name='Good Row Co').exists())
+
+    def test_csv_import_explains_existing_companies_and_ignored_columns(self):
+        response = self._post_import_csv(
+            f'name,Primary Contact,favorite_color\n{self.company.name},Pat Lee,blue\n'.encode()
+        )
+
+        self.assertContains(response, '1 company was already in the portal and left unchanged')
+        self.assertContains(response, 'Overwrite existing')
+        self.assertContains(response, 'not recognized and were ignored')
+        self.assertContains(response, '&quot;Primary Contact&quot; (rename to contact_1_name')
+        self.assertContains(response, '&quot;favorite_color&quot;.')
+
+    def test_csv_import_rejects_non_utf8_file_with_instructions(self):
+        response = self._post_import_csv('name\nCafé Résumé\n'.encode('cp1252'))
+
+        self.assertContains(response, 'could not be read as a UTF-8 CSV')
+        self.assertFalse(Company.objects.filter(name__startswith='Caf').exists())
+
+    def test_csv_import_with_headers_only_reports_no_rows(self):
+        response = self._post_import_csv(b'name,industry\n')
+
+        self.assertContains(response, 'has column headers but no company rows')
+
+    def test_admin_csv_import_uses_same_error_messages(self):
+        self.staff.is_superuser = True
+        self.staff.save(update_fields=['is_superuser'])
+        self.client.force_login(self.staff)
+
+        response = self.client.post(reverse('admin:company-import-csv'), {
+            'csv_file': SimpleUploadedFile(
+                'companies.csv', b'Company Name\nAdmin Header Co\n', content_type='text/csv',
+            ),
+        })
+
+        self.assertContains(response, 'this file has no &quot;name&quot; column')
+        self.assertFalse(Company.objects.filter(name='Admin Header Co').exists())
+
     def test_staff_can_filter_by_effective_last_visit_year(self):
         self.company.imported_last_visit_date = date(2022, 5, 1)
         self.company.save(update_fields=['imported_last_visit_date'])

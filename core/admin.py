@@ -1,5 +1,3 @@
-import csv
-import io
 from datetime import timedelta
 
 from django.contrib import admin, messages
@@ -13,7 +11,9 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from .forms import BaseCompanyContactFormSet, CompanyCSVUploadForm
-from .company_import import company_data_from_csv_row, contacts_from_csv_row, replace_company_contacts
+from .company_import import (
+    CSVImportError, decode_csv_upload, import_companies_from_csv, report_company_import,
+)
 from .models import Assignment, AssignmentRequest, Badge, Company, CompanyContact, ContactAttempt, InviteCode, Message, Notice, Reply, Resource, UserBadge, UserProfile, VisitNote
 
 # ---------------------------------------------------------------------------
@@ -318,69 +318,17 @@ class CompanyAdmin(admin.ModelAdmin):
         if request.method == 'POST':
             form = CompanyCSVUploadForm(request.POST, request.FILES)
             if form.is_valid():
-                csv_file  = request.FILES['csv_file']
                 overwrite = form.cleaned_data.get('overwrite_existing', False)
                 try:
-                    decoded = csv_file.read().decode('utf-8-sig')
-                    reader  = csv.DictReader(io.StringIO(decoded))
-
-                    created = updated = restored = skipped = 0
-                    row_errors = []
-
-                    for i, row in enumerate(reader, start=2):
-                        name = (row.get('name') or '').strip()
-                        if not name:
-                            row_errors.append(f"Row {i}: skipped (no name)")
-                            skipped += 1
-                            continue
-
-                        try:
-                            data = company_data_from_csv_row(row)
-                            contact_data = contacts_from_csv_row(row)
-                        except ValueError as exc:
-                            row_errors.append(f"Row {i}: skipped ({exc})")
-                            skipped += 1
-                            continue
-
-                        existing = Company.objects.filter(name__iexact=name).first()
-                        if existing:
-                            if existing.is_archived:
-                                if overwrite:
-                                    for field, val in data.items():
-                                        setattr(existing, field, val)
-                                existing.is_archived = False
-                                existing.archived_at = None
-                                existing.archived_by = None
-                                existing.save()
-                                if overwrite:
-                                    replace_company_contacts(existing, contact_data)
-                                restored += 1
-                                continue
-                            if overwrite:
-                                for field, val in data.items():
-                                    setattr(existing, field, val)
-                                existing.save()
-                                replace_company_contacts(existing, contact_data)
-                                updated += 1
-                            else:
-                                skipped += 1
-                        else:
-                            data['name'] = name
-                            company = Company.objects.create(**data)
-                            replace_company_contacts(company, contact_data)
-                            created += 1
-
-                    summary = (
-                        f"Import complete: {created} created, {updated} updated, "
-                        f"{restored} restored, {skipped} skipped."
-                    )
-                    if row_errors:
-                        summary += " Errors: " + "; ".join(row_errors[:5])
-                    messages.success(request, summary)
-                    return HttpResponseRedirect('../')
-
+                    decoded = decode_csv_upload(request.FILES['csv_file'])
+                    result = import_companies_from_csv(decoded, overwrite)
+                except CSVImportError as exc:
+                    messages.error(request, str(exc))
                 except Exception as exc:
                     messages.error(request, f"Import failed: {exc}")
+                else:
+                    report_company_import(request, result)
+                    return HttpResponseRedirect('../')
         else:
             form = CompanyCSVUploadForm()
 
