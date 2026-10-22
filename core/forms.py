@@ -324,6 +324,30 @@ CompanyContactFormSet = inlineformset_factory(
 
 
 class CompanyManagementForm(forms.ModelForm):
+    primary_contact_phone = forms.CharField(
+        label='Contact Phone',
+        max_length=CompanyContact._meta.get_field('phone').max_length,
+        required=False,
+        widget=forms.TextInput(attrs=_fc),
+    )
+    primary_contact_email = forms.EmailField(
+        label='Contact Email',
+        required=False,
+        widget=forms.EmailInput(attrs=_fc),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        primary = self._primary_contact()
+        if primary:
+            self.fields['primary_contact_phone'].initial = primary.phone
+            self.fields['primary_contact_email'].initial = primary.email
+
+    def _primary_contact(self):
+        if not self.instance.pk:
+            return None
+        return self.instance.contacts.filter(is_primary=True).first()
+
     class Meta:
         model = Company
         fields = (
@@ -371,18 +395,35 @@ class CompanyManagementForm(forms.ModelForm):
             )
         return status
 
+    def clean(self):
+        cleaned_data = super().clean()
+        has_details = cleaned_data.get('primary_contact_phone') or cleaned_data.get('primary_contact_email')
+        if has_details and not cleaned_data.get('primary_contact_name'):
+            self.add_error(
+                'primary_contact_name',
+                'Enter the contact name for this phone or email, or put a general '
+                'number in the company Phone field.',
+            )
+        return cleaned_data
+
     def save(self, commit=True):
         company = super().save(commit=commit)
         if commit and company.primary_contact_name:
+            phone = self.cleaned_data.get('primary_contact_phone', '')
+            email = self.cleaned_data.get('primary_contact_email', '')
             primary = company.contacts.filter(is_primary=True).first()
             if primary:
                 primary.name = company.primary_contact_name
                 primary.title = company.primary_contact_title
-                primary.save(update_fields=['name', 'title'])
+                primary.phone = phone
+                primary.email = email
+                primary.save(update_fields=['name', 'title', 'phone', 'email'])
             elif not company.contacts.exists():
                 company.contacts.create(
                     name=company.primary_contact_name,
                     title=company.primary_contact_title,
+                    phone=phone,
+                    email=email,
                     is_primary=True,
                 )
         return company

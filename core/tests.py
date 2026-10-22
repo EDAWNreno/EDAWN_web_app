@@ -403,6 +403,68 @@ class CompanyManagementTests(TestCase):
         self.assertIsNone(self.company.archived_at)
         self.assertIsNone(self.company.archived_by)
 
+    def test_edit_page_shows_primary_contact_phone_and_email(self):
+        self.company.contacts.create(
+            name='Theresa Auld', phone='(775) 353-8338', email='theresa@example.com', is_primary=True,
+        )
+        self.company.sync_primary_contact()
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse('staff_company_detail', args=[self.company.pk]))
+
+        self.assertContains(response, 'Contact Phone')
+        self.assertContains(response, 'name="primary_contact_phone" value="(775) 353-8338"')
+        self.assertContains(response, 'name="primary_contact_email" value="theresa@example.com"')
+
+    def test_staff_can_edit_primary_contact_phone_and_email(self):
+        contact = self.company.contacts.create(name='Theresa Auld', phone='(775) 353-8338', is_primary=True)
+        self.company.sync_primary_contact()
+        self.company.refresh_from_db()
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            reverse('staff_company_detail', args=[self.company.pk]),
+            self._company_payload(
+                primary_contact_phone='(775) 555-0100',
+                primary_contact_email='theresa@example.com',
+            ),
+        )
+
+        self.assertRedirects(response, reverse('staff_company_detail', args=[self.company.pk]))
+        contact.refresh_from_db()
+        self.assertEqual(contact.phone, '(775) 555-0100')
+        self.assertEqual(contact.email, 'theresa@example.com')
+
+    def test_new_primary_contact_from_edit_page_keeps_phone_and_email(self):
+        self.client.force_login(self.staff)
+
+        self.client.post(
+            reverse('staff_company_detail', args=[self.company.pk]),
+            self._company_payload(
+                primary_contact_name='Pat Lee',
+                primary_contact_phone='(775) 555-0101',
+                primary_contact_email='pat@example.com',
+            ),
+        )
+
+        contact = self.company.contacts.get(is_primary=True)
+        self.assertEqual(
+            (contact.name, contact.phone, contact.email),
+            ('Pat Lee', '(775) 555-0101', 'pat@example.com'),
+        )
+
+    def test_contact_phone_without_name_is_rejected(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            reverse('staff_company_detail', args=[self.company.pk]),
+            self._company_payload(primary_contact_phone='(775) 555-0102'),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Enter the contact name for this phone or email')
+        self.assertFalse(self.company.contacts.exists())
+
     def test_staff_can_control_individual_browse_visibility(self):
         self.client.force_login(self.staff)
 

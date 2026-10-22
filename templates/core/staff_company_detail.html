@@ -63,10 +63,21 @@
             <div class="col-md-5"><label class="form-label fw-semibold">City</label>{{ form.city }}</div>
             <div class="col-md-3"><label class="form-label fw-semibold">State</label>{{ form.state }}</div>
             <div class="col-md-4"><label class="form-label fw-semibold">ZIP Code</label>{{ form.zip_code }}</div>
-            <div class="col-md-6"><label class="form-label fw-semibold">Phone</label>{{ form.phone }}</div>
-            <div class="col-md-6"><label class="form-label fw-semibold">Email</label>{{ form.email }}</div>
-            <div class="col-md-6"><label class="form-label fw-semibold">Primary Contact</label>{{ form.primary_contact_name }}</div>
+            <div class="col-md-6"><label class="form-label fw-semibold">Company Phone</label>{{ form.phone }}</div>
+            <div class="col-md-6"><label class="form-label fw-semibold">Company Email</label>{{ form.email }}</div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Primary Contact</label>{{ form.primary_contact_name }}
+              {% for error in form.primary_contact_name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            </div>
             <div class="col-md-6"><label class="form-label fw-semibold">Contact Title</label>{{ form.primary_contact_title }}</div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Contact Phone</label>{{ form.primary_contact_phone }}
+              {% for error in form.primary_contact_phone.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Contact Email</label>{{ form.primary_contact_email }}
+              {% for error in form.primary_contact_email.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            </div>
             <div class="col-12">
               <label class="form-label fw-semibold">Internal Admin Notes</label>{{ form.notes }}
               <div class="form-text">Visible to staff on this management page.</div>
