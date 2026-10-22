@@ -266,6 +266,7 @@ class CompanyManagementTests(TestCase):
 
         response = self.client.post(
             reverse('staff_company_mark_visited', args=[self.company.pk]),
+            {'reason': 'Visited by staff at a chamber event'},
         )
 
         self.assertRedirects(
@@ -286,6 +287,7 @@ class CompanyManagementTests(TestCase):
 
         response = self.client.post(
             reverse('staff_company_mark_visited', args=[self.company.pk]),
+            {'reason': 'Visited by staff at a chamber event'},
         )
 
         self.assertRedirects(
@@ -296,6 +298,88 @@ class CompanyManagementTests(TestCase):
         self.assertEqual(self.company.status, Company.STATUS_VISITED)
         self.assertFalse(self.company.assignments.exists())
         self.assertFalse(VisitNote.objects.filter(assignment__company=self.company).exists())
+
+    def test_mark_visited_requires_reason(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            reverse('staff_company_mark_visited', args=[self.company.pk]), {'reason': '   '}, follow=True,
+        )
+
+        self.assertContains(response, 'Enter a reason before marking a company visited')
+        self.company.refresh_from_db()
+        self.assertEqual(self.company.status, Company.STATUS_UNASSIGNED)
+
+    def test_mark_visited_saves_reason_and_admin_to_notes(self):
+        self.client.force_login(self.staff)
+
+        self.client.post(
+            reverse('staff_company_mark_visited', args=[self.company.pk]),
+            {'reason': 'Met them at the Sparks open house'},
+        )
+
+        self.company.refresh_from_db()
+        self.assertTrue(self.company.notes.startswith('Call the operations director before visiting.'))
+        self.assertIn(
+            'Casey marked visited without a visit report: Met them at the Sparks open house',
+            self.company.notes,
+        )
+
+    def _post_visit(self, **data):
+        assignment = Assignment.objects.create(
+            company=self.company, volunteer=self.volunteer, assigned_by=self.staff,
+        )
+        self.client.force_login(self.volunteer)
+        payload = {
+            'contact_name': 'Pat Lee',
+            'notes': 'Met with Pat, the plant manager. They are hiring 10 machinists this spring.',
+            'hiring_status': 'hiring',
+            'contact-primary_contact_name': '',
+        }
+        payload.update(data)
+        response = self.client.post(reverse('log_visit', args=[assignment.pk]), payload)
+        return assignment, response
+
+    def test_visit_report_requires_contact_spoken_to(self):
+        assignment, response = self._post_visit(contact_name='')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(VisitNote.objects.filter(assignment=assignment).exists())
+        assignment.refresh_from_db()
+        self.assertEqual(assignment.status, Assignment.STATUS_ACTIVE)
+
+    def test_visit_report_requires_fifty_character_notes(self):
+        assignment, response = self._post_visit(notes='n/a')
+
+        self.assertContains(response, 'at least 50 characters (3 entered)')
+        self.assertFalse(VisitNote.objects.filter(assignment=assignment).exists())
+
+    def test_complete_visit_report_marks_company_visited(self):
+        assignment, response = self._post_visit()
+
+        self.assertEqual(response.status_code, 302)
+        assignment.refresh_from_db()
+        self.company.refresh_from_db()
+        self.assertEqual(assignment.status, Assignment.STATUS_COMPLETED)
+        self.assertEqual(self.company.status, Company.STATUS_VISITED)
+
+    def test_existing_short_visit_note_can_still_be_edited(self):
+        assignment = Assignment.objects.create(
+            company=self.company, volunteer=self.volunteer, assigned_by=self.staff,
+        )
+        note = VisitNote.objects.create(
+            assignment=assignment, visited_by=self.volunteer, notes='Short', hiring_status='unknown',
+        )
+        self.client.force_login(self.volunteer)
+
+        response = self.client.post(
+            reverse('edit_visit_note', args=[assignment.pk, note.pk]),
+            {'notes': 'Short note', 'hiring_status': 'stable'},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        note.refresh_from_db()
+        self.assertEqual(note.hiring_status, 'stable')
 
     def test_mark_visited_requires_staff_post_and_active_company(self):
         url = reverse('staff_company_mark_visited', args=[self.company.pk])
@@ -310,7 +394,7 @@ class CompanyManagementTests(TestCase):
         self.company.is_archived = True
         self.company.save(update_fields=['is_archived'])
         self.client.force_login(self.staff)
-        response = self.client.post(url)
+        response = self.client.post(url, {'reason': 'Test'})
         self.assertRedirects(
             response,
             reverse('staff_company_detail', args=[self.company.pk]),

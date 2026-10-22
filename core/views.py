@@ -444,6 +444,10 @@ def staff_company_detail(request, pk):
 def staff_company_mark_visited(request, pk):
     """Complete an active assignment and mark its company visited without a report."""
     completed_assignment = None
+    reason = ' '.join(request.POST.get('reason', '').split())
+    if not reason:
+        messages.error(request, 'Enter a reason before marking a company visited without a visit report.')
+        return redirect('staff_company_detail', pk=pk)
 
     with transaction.atomic():
         company = get_object_or_404(
@@ -472,8 +476,12 @@ def staff_company_mark_visited(request, pk):
             active_assignment.save(update_fields=['status', 'completed_date'])
             completed_assignment = active_assignment
 
+        admin_name = request.user.get_full_name() or request.user.username
+        stamp = timezone.localtime().strftime('%b %-d, %Y %-I:%M %p')
+        entry = f'[{stamp}] {admin_name} marked visited without a visit report: {reason}'
+        company.notes = f'{company.notes.rstrip()}\n\n{entry}' if company.notes.strip() else entry
         company.status = Company.STATUS_VISITED
-        company.save(update_fields=['status', 'updated_at'])
+        company.save(update_fields=['status', 'notes', 'updated_at'])
         company.assignment_requests.filter(
             status=AssignmentRequest.STATUS_PENDING,
         ).update(status=AssignmentRequest.STATUS_DENIED)
@@ -491,7 +499,8 @@ def staff_company_mark_visited(request, pk):
         detail = f' {volunteer_name}\'s assignment was completed.'
     messages.success(
         request,
-        f'"{company.name}" was marked visited without a visit report.{detail}',
+        f'"{company.name}" was marked visited without a visit report.{detail} '
+        'The reason was saved to Internal Admin Notes.',
     )
     return redirect('staff_company_detail', pk=company.pk)
 

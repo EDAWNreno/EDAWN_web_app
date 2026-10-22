@@ -67,9 +67,12 @@
           <!-- Who was spoken to on this specific visit -->
           <div class="mb-3">
             <label class="form-label small fw-semibold" for="{{ form.contact_name.id_for_label }}">
-              {{ form.contact_name.label }}
+              {{ form.contact_name.label }}{% if form.contact_name.field.required %} <span class="text-danger">*</span>{% endif %}
             </label>
             {{ form.contact_name }}
+            {% if form.contact_name.errors %}
+            <div class="text-danger small mt-1">{{ form.contact_name.errors }}</div>
+            {% endif %}
             <div class="form-text">May differ from the primary contact above.</div>
           </div>
 
@@ -117,6 +120,7 @@
         </div>
         <div class="card-body">
           {{ form.notes }}
+          {% if not form.instance.pk %}<div class="form-text">At least 50 characters. Include who you met and what you learned.</div>{% endif %}
           {% if form.notes.errors %}
           <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
           {% endif %}

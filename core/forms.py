@@ -7,6 +7,8 @@ from .models import Assignment, AssignmentRequest, Company, CompanyContact, Cont
 _fc = {'class': 'form-control'}
 _fs = {'class': 'form-select'}
 
+MIN_VISIT_NOTES_LENGTH = 50
+
 
 # ---------------------------------------------------------------------------
 # Auth
@@ -206,6 +208,18 @@ class VisitNoteForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Required on form but blank=True on model to allow existing rows without a value
         self.fields['hiring_status'].required = True
+        # Stricter rules apply to new reports only, so older notes stay editable.
+        if self.instance.pk is None:
+            self.fields['contact_name'].required = True
+
+    def clean_notes(self):
+        notes = self.cleaned_data['notes'].strip()
+        if self.instance.pk is None and len(notes) < MIN_VISIT_NOTES_LENGTH:
+            raise forms.ValidationError(
+                f'Please describe the visit in at least {MIN_VISIT_NOTES_LENGTH} characters '
+                f'({len(notes)} entered). Include who you met and what you learned.'
+            )
+        return notes
 
 
 # ---------------------------------------------------------------------------
