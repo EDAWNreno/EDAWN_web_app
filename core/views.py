@@ -429,6 +429,13 @@ def staff_company_detail(request, pk):
         'contact_attempts': contact_attempts,
         'pending_requests': pending_requests,
         'active_assignment': company.active_assignment,
+        'last_completed_assignment': (
+            company.assignments
+            .filter(status=Assignment.STATUS_COMPLETED)
+            .select_related('volunteer')
+            .order_by('-completed_date', '-assigned_date')
+            .first()
+        ),
     })
 
 
@@ -485,6 +492,67 @@ def staff_company_mark_visited(request, pk):
     messages.success(
         request,
         f'"{company.name}" was marked visited without a visit report.{detail}',
+    )
+    return redirect('staff_company_detail', pk=company.pk)
+
+
+@staff_member_required
+@require_POST
+def staff_company_reopen_visit(request, pk):
+    """Undo a visited status, optionally sending the company back to its last visitor."""
+    send_back = request.POST.get('send_back') == '1'
+
+    with transaction.atomic():
+        company = get_object_or_404(Company.objects.select_for_update(), pk=pk)
+        if company.is_archived:
+            messages.error(request, f'Archived company "{company.name}" cannot be reopened.')
+            return redirect('staff_company_detail', pk=company.pk)
+        if company.status != Company.STATUS_VISITED:
+            messages.error(request, f'"{company.name}" is not marked visited.')
+            return redirect('staff_company_detail', pk=company.pk)
+        if company.assignments.filter(status=Assignment.STATUS_ACTIVE).exists():
+            messages.error(request, f'"{company.name}" already has an active assignment.')
+            return redirect('staff_company_detail', pk=company.pk)
+
+        completed = (
+            company.assignments
+            .select_for_update()
+            .filter(status=Assignment.STATUS_COMPLETED)
+            .select_related('volunteer')
+            .order_by('-completed_date', '-assigned_date')
+            .first()
+        )
+        if send_back and (completed is None or not completed.volunteer.is_active):
+            messages.error(request, 'There is no active volunteer to send this company back to.')
+            return redirect('staff_company_detail', pk=company.pk)
+
+        # The completed assignment stops counting as a visit, but it and any
+        # visit report stay in the company history.
+        if completed is not None:
+            completed.status = Assignment.STATUS_UNASSIGNED
+            completed.unassigned_at = timezone.now()
+            completed.unassigned_by = request.user
+            completed.save(update_fields=['status', 'unassigned_at', 'unassigned_by'])
+
+        if send_back:
+            Assignment.objects.create(
+                company=company,
+                volunteer=completed.volunteer,
+                assigned_by=request.user,
+            )
+            company.status = Company.STATUS_ASSIGNED
+        else:
+            company.status = Company.STATUS_UNASSIGNED
+        company.save(update_fields=['status', 'updated_at'])
+
+    if send_back:
+        volunteer_name = completed.volunteer.get_full_name() or completed.volunteer.username
+        detail = f'assigned back to {volunteer_name} so they can submit a visit report'
+    else:
+        detail = 'returned to the unassigned pool'
+    messages.success(
+        request,
+        f'"{company.name}" was reopened and {detail}. Previous visit notes were preserved.',
     )
     return redirect('staff_company_detail', pk=company.pk)
 

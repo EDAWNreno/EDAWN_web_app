@@ -166,6 +166,33 @@
           </button>
         </form>
         {% endif %}
+        {% if not company.is_archived and company.status == 'visited' %}
+        {% with visitor=last_completed_assignment.volunteer %}
+        <div class="small text-muted mb-2">
+          Marked visited{% if visitor %} by {{ visitor.get_full_name|default:visitor.username }}{% endif %}.
+          Reopen it if the visit wasn't completed or the report is missing.
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          {% if visitor and visitor.is_active %}
+          <form method="post" action="{% url 'staff_company_reopen_visit' company.pk %}"
+                onsubmit="return confirm('Reopen {{ company.name|escapejs }} and assign it back to {{ visitor.get_full_name|default:visitor.username|escapejs }}?');">
+            {% csrf_token %}
+            <input type="hidden" name="send_back" value="1">
+            <button class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-arrow-counterclockwise me-1"></i>Send Back to {{ visitor.get_full_name|default:visitor.username }}
+            </button>
+          </form>
+          {% endif %}
+          <form method="post" action="{% url 'staff_company_reopen_visit' company.pk %}"
+                onsubmit="return confirm('Reopen {{ company.name|escapejs }} and return it to the unassigned pool?');">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-outline-warning">
+              <i class="bi bi-arrow-counterclockwise me-1"></i>Return to Unassigned
+            </button>
+          </form>
+        </div>
+        {% endwith %}
+        {% endif %}
         {% endif %}
       </div>
     </div>

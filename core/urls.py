@@ -30,6 +30,7 @@ urlpatterns = [
     path('staff/companies/hide-all-visible/',        views.staff_companies_hide_all_visible, name='staff_companies_hide_all_visible'),
     path('staff/companies/<int:pk>/',                views.staff_company_detail,      name='staff_company_detail'),
     path('staff/companies/<int:pk>/mark-visited/',   views.staff_company_mark_visited, name='staff_company_mark_visited'),
+    path('staff/companies/<int:pk>/reopen-visit/',   views.staff_company_reopen_visit, name='staff_company_reopen_visit'),
     path('staff/companies/<int:pk>/archive/',        views.staff_company_archive,     name='staff_company_archive'),
     path('staff/companies/<int:pk>/restore/',        views.staff_company_restore,     name='staff_company_restore'),
     path('staff/add-company/', views.quick_add_company, name='staff_add_company'),

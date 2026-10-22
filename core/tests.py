@@ -465,6 +465,80 @@ class CompanyManagementTests(TestCase):
         self.assertContains(response, 'Enter the contact name for this phone or email')
         self.assertFalse(self.company.contacts.exists())
 
+    def _visited_assignment(self, notes='n/a'):
+        assignment = Assignment.objects.create(
+            company=self.company, volunteer=self.volunteer, assigned_by=self.staff,
+        )
+        VisitNote.objects.create(
+            assignment=assignment, visited_by=self.volunteer, notes=notes, hiring_status='unknown',
+        )
+        self.company.refresh_from_db()
+        assignment.refresh_from_db()
+        self.assertEqual(self.company.status, Company.STATUS_VISITED)
+        return assignment
+
+    def test_staff_can_send_visited_company_back_to_volunteer(self):
+        old_assignment = self._visited_assignment()
+        self.client.force_login(self.staff)
+
+        response = self.client.post(
+            reverse('staff_company_reopen_visit', args=[self.company.pk]), {'send_back': '1'},
+        )
+
+        self.assertRedirects(response, reverse('staff_company_detail', args=[self.company.pk]))
+        self.company.refresh_from_db()
+        old_assignment.refresh_from_db()
+        self.assertEqual(self.company.status, Company.STATUS_ASSIGNED)
+        self.assertEqual(old_assignment.status, Assignment.STATUS_UNASSIGNED)
+        self.assertEqual(old_assignment.unassigned_by, self.staff)
+        new_assignment = self.company.assignments.get(status=Assignment.STATUS_ACTIVE)
+        self.assertEqual(new_assignment.volunteer, self.volunteer)
+        self.assertEqual(VisitNote.objects.filter(assignment=old_assignment).count(), 1)
+
+    def test_staff_can_return_visited_company_to_unassigned_pool(self):
+        old_assignment = self._visited_assignment()
+        self.client.force_login(self.staff)
+
+        self.client.post(reverse('staff_company_reopen_visit', args=[self.company.pk]))
+
+        self.company.refresh_from_db()
+        old_assignment.refresh_from_db()
+        self.assertEqual(self.company.status, Company.STATUS_UNASSIGNED)
+        self.assertEqual(old_assignment.status, Assignment.STATUS_UNASSIGNED)
+        self.assertFalse(self.company.assignments.filter(status=Assignment.STATUS_ACTIVE).exists())
+        self.assertTrue(VisitNote.objects.filter(assignment=old_assignment).exists())
+
+    def test_staff_can_reopen_company_marked_visited_without_assignment(self):
+        self.company.status = Company.STATUS_VISITED
+        self.company.save(update_fields=['status'])
+        self.client.force_login(self.staff)
+
+        page = self.client.get(reverse('staff_company_detail', args=[self.company.pk]))
+        self.assertContains(page, 'Return to Unassigned')
+        self.assertNotContains(page, 'Send Back to')
+        self.client.post(reverse('staff_company_reopen_visit', args=[self.company.pk]))
+
+        self.company.refresh_from_db()
+        self.assertEqual(self.company.status, Company.STATUS_UNASSIGNED)
+
+    def test_visited_company_page_shows_reopen_options(self):
+        self._visited_assignment()
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse('staff_company_detail', args=[self.company.pk]))
+
+        self.assertContains(response, 'Send Back to Val')
+        self.assertContains(response, 'Return to Unassigned')
+
+    def test_volunteer_cannot_reopen_visit(self):
+        self._visited_assignment()
+        self.client.force_login(self.volunteer)
+
+        self.client.post(reverse('staff_company_reopen_visit', args=[self.company.pk]), {'send_back': '1'})
+
+        self.company.refresh_from_db()
+        self.assertEqual(self.company.status, Company.STATUS_VISITED)
+
     def test_staff_can_control_individual_browse_visibility(self):
         self.client.force_login(self.staff)
 
