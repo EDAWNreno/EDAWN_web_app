@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .emails import notify_invite
-from .models import Assignment, AssignmentRequest, Company, CompanyContact, ContactAttempt, Message, VisitNote
+from .models import Assignment, AssignmentRequest, Company, CompanyContact, ContactAttempt, Message, Notice, VisitNote
 from .salesforce import sync_visit_to_salesforce
 
 
@@ -1564,3 +1564,100 @@ class MessageNotificationTests(TestCase):
         self.assertEqual(mail.outbox[0].to, [volunteer.email])
         self.assertEqual(mail.outbox[0].subject, 'New message in the Business Builders portal')
         self.assertIn('Kim sent you a direct message', mail.outbox[0].body)
+
+
+@override_settings(
+    EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    EMAIL_HOST_PASSWORD='test-resend-key',
+    SECURE_SSL_REDIRECT=False,
+    SITE_URL='https://portal.example.test',
+)
+class NoticeEmailTests(TestCase):
+    def setUp(self):
+        self.staff = User.objects.create_user(
+            username='staff', email='staff@example.com', password='test-pass', is_staff=True,
+        )
+        self.volunteer = User.objects.create_user(
+            username='val', email='val@example.com', password='test-pass',
+        )
+        self.second_volunteer = User.objects.create_user(
+            username='sam', email='sam@example.com', password='test-pass',
+        )
+        User.objects.create_user(
+            username='removed', email='removed@example.com', password='test-pass', is_active=False,
+        )
+        User.objects.create_user(username='no-email', email='', password='test-pass')
+        self.client.force_login(self.staff)
+
+    def _notice_data(self, **overrides):
+        data = {
+            'title': 'Volunteer Appreciation Night',
+            'body': 'Join us June 15 at the Sparks office.\nFood provided.',
+            'link_url': 'https://example.com/rsvp',
+            'link_text': 'RSVP here',
+            'is_active': 'on',
+            'expires_at': (timezone.now() + timedelta(days=7)).strftime('%Y-%m-%dT%H:%M'),
+            'email_volunteers': 'on',
+        }
+        data.update(overrides)
+        return {k: v for k, v in data.items() if v is not None}
+
+    def test_new_notice_emails_active_volunteers_with_body(self):
+        response = self.client.post(reverse('staff_notice_create'), self._notice_data(), follow=True)
+
+        self.assertRedirects(response, reverse('staff_notices'))
+        self.assertContains(response, 'Notice saved and emailed to 2 volunteers.')
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(set(email.bcc), {'val@example.com', 'sam@example.com'})
+        self.assertNotIn('staff@example.com', email.recipients())
+        self.assertEqual(email.subject, 'Portal update: Volunteer Appreciation Night')
+        self.assertIn("There's a new update on the Business Builders portal.", email.body)
+        self.assertIn('Join us June 15 at the Sparks office.\nFood provided.', email.body)
+        self.assertIn('RSVP here: https://example.com/rsvp', email.body)
+        self.assertIn('https://portal.example.test/', email.body)
+
+    def test_large_roster_is_batched(self):
+        for i in range(60):
+            User.objects.create_user(username=f'vol{i}', email=f'vol{i}@example.com', password='test-pass')
+
+        self.client.post(reverse('staff_notice_create'), self._notice_data())
+
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual([len(m.bcc) for m in mail.outbox], [50, 12])
+
+    def test_unchecked_or_inactive_notice_sends_no_email(self):
+        self.client.post(reverse('staff_notice_create'), self._notice_data(email_volunteers=None))
+        self.client.post(reverse('staff_notice_create'), self._notice_data(is_active=None))
+
+        self.assertEqual(Notice.objects.count(), 2)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_editing_notice_does_not_resend(self):
+        self.client.post(reverse('staff_notice_create'), self._notice_data())
+        notice = Notice.objects.get()
+        mail.outbox.clear()
+
+        self.client.post(reverse('staff_notice_edit', args=[notice.pk]), self._notice_data(title='Updated'))
+
+        notice.refresh_from_db()
+        self.assertEqual(notice.title, 'Updated')
+        self.assertEqual(len(mail.outbox), 0)
+
+    @override_settings(EMAIL_HOST_PASSWORD='')
+    def test_unconfigured_email_warns_staff(self):
+        response = self.client.post(reverse('staff_notice_create'), self._notice_data(), follow=True)
+
+        self.assertContains(response, 'Email is not configured, so volunteers were not emailed.')
+        self.assertEqual(Notice.objects.count(), 1)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_email_checkbox_only_on_new_notice_form(self):
+        response = self.client.get(reverse('staff_notice_create'))
+        self.assertContains(response, 'Email this notice to all volunteers')
+
+        notice = Notice.objects.create(
+            title='Existing', expires_at=timezone.now() + timedelta(days=1), created_by=self.staff,
+        )
+        response = self.client.get(reverse('staff_notice_edit', args=[notice.pk]))
+        self.assertNotContains(response, 'Email this notice to all volunteers')

@@ -1,5 +1,8 @@
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMessage, get_connection, send_mail
+
+# Resend caps a single message at 50 recipients.
+NOTICE_EMAIL_BATCH_SIZE = 50
 
 
 def _portal_url(path=''):
@@ -166,3 +169,59 @@ def _staff_emails():
         .exclude(email='')
         .values_list('email', flat=True)
     )
+
+
+def _volunteer_emails():
+    from django.contrib.auth.models import User
+    return list(
+        User.objects.filter(is_staff=False, is_active=True)
+        .exclude(email='')
+        .order_by('email')
+        .values_list('email', flat=True)
+        .distinct()
+    )
+
+
+def notify_volunteers_new_notice(notice):
+    """Email every active volunteer when staff post a dashboard notice.
+
+    Volunteers are BCC'd in batches so addresses stay private and a large
+    roster goes out in a handful of messages. Returns the number of
+    volunteers emailed, or None when email isn't configured.
+    """
+    if not settings.EMAIL_HOST_PASSWORD:
+        return None
+    recipients = _volunteer_emails()
+    if not recipients:
+        return 0
+
+    lines = ["There's a new update on the Business Builders portal.", '', notice.title]
+    if notice.body:
+        lines += ['', notice.body]
+    if notice.link_url:
+        lines += ['', f"{notice.link_text or 'Learn more'}: {notice.link_url}"]
+    lines += [
+        '',
+        f"See it on your dashboard:\n{_portal_url('/')}",
+        '',
+        '- Northern NV Now Business Builders',
+    ]
+    body = '\n'.join(lines)
+
+    connection = get_connection()
+    batches = [
+        recipients[i:i + NOTICE_EMAIL_BATCH_SIZE]
+        for i in range(0, len(recipients), NOTICE_EMAIL_BATCH_SIZE)
+    ]
+    connection.send_messages([
+        EmailMessage(
+            subject=f'Portal update: {notice.title}',
+            body=body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[settings.DEFAULT_FROM_EMAIL],
+            bcc=batch,
+            connection=connection,
+        )
+        for batch in batches
+    ])
+    return len(recipients)

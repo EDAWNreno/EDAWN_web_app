@@ -27,6 +27,7 @@ from .emails import (
     notify_invite,
     notify_staff_private_message,
     notify_volunteer_direct_message,
+    notify_volunteers_new_notice,
 )
 from .models import Assignment, AssignmentRequest, Badge, Company, ContactAttempt, InviteCode, Message, Notice, Reply, Resource, UserBadge, UserProfile, VisitNote
 from .forms import (RegisterForm, AccountForm, ContactAttemptForm, VisitNoteForm, CompanyContactUpdateForm,
@@ -1845,7 +1846,18 @@ def staff_notice_form(request, pk=None):
             if not pk:
                 obj.created_by = request.user
             obj.save()
-            messages.success(request, 'Notice saved.')
+            if not pk and obj.is_active and form.cleaned_data.get('email_volunteers'):
+                try:
+                    sent = notify_volunteers_new_notice(obj)
+                except Exception:
+                    messages.warning(request, 'Notice saved, but the volunteer email failed to send.')
+                else:
+                    if sent is None:
+                        messages.warning(request, 'Notice saved. Email is not configured, so volunteers were not emailed.')
+                    else:
+                        messages.success(request, f'Notice saved and emailed to {sent} volunteer{"s" if sent != 1 else ""}.')
+            else:
+                messages.success(request, 'Notice saved.')
             return redirect('staff_notices')
     else:
         form = NoticeForm(instance=notice)

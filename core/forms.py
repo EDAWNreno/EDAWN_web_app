@@ -502,6 +502,13 @@ class CompanyCSVUploadForm(forms.Form):
 
 
 class NoticeForm(forms.ModelForm):
+    email_volunteers = forms.BooleanField(
+        required=False,
+        initial=True,
+        label='Email this notice to all volunteers',
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+    )
+
     class Meta:
         model  = Notice
         fields = ('title', 'body', 'link_url', 'link_text', 'is_active', 'expires_at')
