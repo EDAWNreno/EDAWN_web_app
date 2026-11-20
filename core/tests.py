@@ -335,8 +335,10 @@ class CompanyManagementTests(TestCase):
             'notes': 'Met with Pat, the plant manager. They are hiring 10 machinists this spring.',
             'hiring_status': 'hiring',
             'contact-primary_contact_name': '',
+            'visit_day': timezone.localdate().isoformat(),
         }
         payload.update(data)
+        payload = {k: v for k, v in payload.items() if v is not None}
         response = self.client.post(reverse('log_visit', args=[assignment.pk]), payload)
         return assignment, response
 
@@ -380,6 +382,76 @@ class CompanyManagementTests(TestCase):
         self.assertEqual(response.status_code, 302)
         note.refresh_from_db()
         self.assertEqual(note.hiring_status, 'stable')
+
+    def test_visit_report_records_past_visit_date(self):
+        visit_day = timezone.localdate() - timedelta(days=5)
+        assignment, response = self._post_visit(visit_day=visit_day.isoformat())
+
+        self.assertEqual(response.status_code, 302)
+        note = VisitNote.objects.get(assignment=assignment)
+        self.assertEqual(timezone.localtime(note.visit_date).date(), visit_day)
+        assignment.refresh_from_db()
+        self.assertEqual(timezone.localtime(assignment.completed_date).date(), visit_day)
+
+    def test_visit_report_rejects_future_or_missing_date(self):
+        tomorrow = timezone.localdate() + timedelta(days=1)
+        assignment, response = self._post_visit(visit_day=tomorrow.isoformat())
+        self.assertContains(response, "The visit date can&#x27;t be in the future.")
+        self.assertFalse(VisitNote.objects.filter(assignment=assignment).exists())
+
+        response = self.client.post(reverse('log_visit', args=[assignment.pk]), {
+            'contact_name': 'Pat Lee',
+            'notes': 'Met with Pat, the plant manager. They are hiring 10 machinists this spring.',
+            'hiring_status': 'hiring',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(VisitNote.objects.filter(assignment=assignment).exists())
+
+    def test_visit_form_defaults_to_today(self):
+        assignment = Assignment.objects.create(
+            company=self.company, volunteer=self.volunteer, assigned_by=self.staff,
+        )
+        self.client.force_login(self.volunteer)
+        response = self.client.get(reverse('log_visit', args=[assignment.pk]))
+        self.assertContains(response, 'Date of Visit')
+        self.assertContains(response, f'value="{timezone.localdate().isoformat()}"')
+
+    def test_editing_visit_can_correct_date_and_blank_keeps_it(self):
+        assignment = Assignment.objects.create(
+            company=self.company, volunteer=self.volunteer, assigned_by=self.staff,
+        )
+        note = VisitNote.objects.create(
+            assignment=assignment, visited_by=self.volunteer, notes='Short', hiring_status='unknown',
+        )
+        self.client.force_login(self.volunteer)
+        url = reverse('edit_visit_note', args=[assignment.pk, note.pk])
+        corrected = timezone.localdate() - timedelta(days=10)
+
+        self.client.post(url, {'notes': 'Short', 'hiring_status': 'stable', 'visit_day': corrected.isoformat()})
+        note.refresh_from_db()
+        self.assertEqual(timezone.localtime(note.visit_date).date(), corrected)
+
+        self.client.post(url, {'notes': 'Short', 'hiring_status': 'stable', 'visit_day': ''})
+        note.refresh_from_db()
+        self.assertEqual(timezone.localtime(note.visit_date).date(), corrected)
+
+    def test_leaderboard_excludes_admins(self):
+        admin_assignment = Assignment.objects.create(
+            company=self.company, volunteer=self.staff, assigned_by=self.staff,
+            status=Assignment.STATUS_COMPLETED,
+        )
+        other = Company.objects.create(name='Volunteer Visit Co')
+        Assignment.objects.create(
+            company=other, volunteer=self.volunteer, assigned_by=self.staff,
+            status=Assignment.STATUS_COMPLETED,
+        )
+        self.client.force_login(self.volunteer)
+
+        response = self.client.get(reverse('leaderboard'))
+        users = list(response.context['users'])
+        self.assertIn(self.volunteer, users)
+        self.assertNotIn(self.staff, users)
+        self.assertNotIn(admin_assignment.volunteer, list(self.client.get(reverse('dashboard')).context['top_users']))
 
     def test_mark_visited_requires_staff_post_and_active_company(self):
         url = reverse('staff_company_mark_visited', args=[self.company.pk])

@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.db.models import Count, Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 
 class Company(models.Model):
@@ -211,7 +212,7 @@ class VisitNote(models.Model):
 
     assignment       = models.ForeignKey(Assignment, on_delete=models.CASCADE, related_name='visit_notes')
     visited_by       = models.ForeignKey(User, on_delete=models.CASCADE)
-    visit_date       = models.DateTimeField(auto_now_add=True)
+    visit_date       = models.DateTimeField(default=timezone.now)
 
     # Who was spoken to
     contact_name = models.CharField(max_length=100, blank=True, verbose_name='Contact spoken to')
@@ -267,9 +268,8 @@ class VisitNote(models.Model):
         super().save(*args, **kwargs)
         # Mark assignment and company as visited/completed on first save only
         if is_new and self.assignment.status == Assignment.STATUS_ACTIVE:
-            from django.utils import timezone
             self.assignment.status = Assignment.STATUS_COMPLETED
-            self.assignment.completed_date = timezone.now()
+            self.assignment.completed_date = self.visit_date
             self.assignment.save(update_fields=['status', 'completed_date'])
             self.assignment.company.status = Company.STATUS_VISITED
             self.assignment.company.save(update_fields=['status'])

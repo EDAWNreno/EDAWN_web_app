@@ -64,6 +64,18 @@
 
           <hr class="my-3">
 
+          <!-- When the visit actually happened -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold" for="{{ form.visit_day.id_for_label }}">
+              {{ form.visit_day.label }} <span class="text-danger">*</span>
+            </label>
+            {{ form.visit_day }}
+            {% if form.visit_day.errors %}
+            <div class="text-danger small mt-1">{{ form.visit_day.errors }}</div>
+            {% endif %}
+            <div class="form-text">{{ form.visit_day.help_text }}</div>
+          </div>
+
           <!-- Who was spoken to on this specific visit -->
           <div class="mb-3">
             <label class="form-label small fw-semibold" for="{{ form.contact_name.id_for_label }}">

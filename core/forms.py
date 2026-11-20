@@ -1,6 +1,9 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
+from datetime import datetime, time
+
 from django.contrib.auth.models import User
+from django.utils import timezone
 from django.forms import BaseInlineFormSet, inlineformset_factory
 from .models import Assignment, AssignmentRequest, Company, CompanyContact, ContactAttempt, InviteCode, Notice, Resource, VisitNote, Message, Reply
 
@@ -134,6 +137,12 @@ class CompanyContactUpdateForm(forms.ModelForm):
 
 
 class VisitNoteForm(forms.ModelForm):
+    visit_day = forms.DateField(
+        label='Date of Visit',
+        widget=forms.DateInput(attrs={**_fc, 'type': 'date'}, format='%Y-%m-%d'),
+        help_text='The day you actually met with the company, not the day you are filling this out.',
+    )
+
     class Meta:
         model  = VisitNote
         fields = (
@@ -206,11 +215,36 @@ class VisitNoteForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        today = timezone.localdate()
+        if self.instance.pk and self.instance.visit_date:
+            self.fields['visit_day'].initial = timezone.localtime(self.instance.visit_date).date()
+            # Editing an existing report: leaving the date blank keeps the saved date.
+            self.fields['visit_day'].required = False
+        else:
+            self.fields['visit_day'].initial = today
+        self.fields['visit_day'].widget.attrs['max'] = today.isoformat()
         # Required on form but blank=True on model to allow existing rows without a value
         self.fields['hiring_status'].required = True
         # Stricter rules apply to new reports only, so older notes stay editable.
         if self.instance.pk is None:
             self.fields['contact_name'].required = True
+
+    def clean_visit_day(self):
+        day = self.cleaned_data['visit_day']
+        if day and day > timezone.localdate():
+            raise forms.ValidationError('The visit date can\'t be in the future.')
+        return day
+
+    def save(self, commit=True):
+        day = self.cleaned_data.get('visit_day')
+        current = self.instance.visit_date if self.instance.pk else None
+        if day and (current is None or timezone.localtime(current).date() != day):
+            if day == timezone.localdate():
+                self.instance.visit_date = timezone.now()
+            else:
+                # Past visits are stored at noon local time so the date never shifts across time zones.
+                self.instance.visit_date = timezone.make_aware(datetime.combine(day, time(12, 0)))
+        return super().save(commit=commit)
 
     def clean_notes(self):
         notes = self.cleaned_data['notes'].strip()

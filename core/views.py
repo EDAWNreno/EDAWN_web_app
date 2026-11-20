@@ -93,6 +93,7 @@ def logout_view(request):
 def _leaderboard_qs():
     return (
         User.objects
+        .filter(is_staff=False, is_superuser=False)
         .select_related('profile')
         .annotate(completed_count=Count(
             'assignments',
